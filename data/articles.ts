@@ -1,15 +1,15 @@
-import type { Article } from '@/lib/types';
+import type { Article, SearchIndexItem } from '@/lib/types';
 
 export const articles: Article[] = [
   {
     id: 'a01',
     slug: 'pemerintah-targetkan-pertumbuhan-ekonomi-5-2-persen-2027',
     title:
-      'Pemerintah Targetkan Pertumbuhan Ekonomi 5,2 Persen pada 2027',
+      'Pemerintah Targetkan Pertumbuhan Ekonomi 5,2% pada 2027',
     excerpt:
       'Kementerian Keuangan memproyeksikan lonjakan investasi dan ekspor sebagai mesin utama pertumbuhan, dengan fokus pada hilirisasi dan ekonomi hijau.',
     content: [
-      { type: 'paragraph', text: 'Pemerintah menetapkan target pertumbuhan ekonomi sebesar 5,2 persen untuk tahun 2027, angka yang dinilai ambisius namun realistis mengingat momentum transformasi struktural yang sedang berjalan. Kementerian Keuangan menyatakan proyeksi tersebut didukung oleh peningkatan investasi di sektor hulu migas serta dorongan ekonomi hijau.' },
+      { type: 'paragraph', text: 'Pemerintah menetapkan target pertumbuhan ekonomi sebesar 5,2% untuk tahun 2027, angka yang dinilai ambisius namun realistis mengingat momentum transformasi struktural yang sedang berjalan. Kementerian Keuangan menyatakan proyeksi tersebut didukung oleh peningkatan investasi di sektor hulu migas serta dorongan ekonomi hijau.' },
       { type: 'heading', text: 'Sektor andalan hilirisasi' },
       { type: 'paragraph', text: 'Hilirisasi mineral menjadi salah satu pilar utama. Dengan beroperasinya sejumlah smelter nikel dan tembaga, nilai ekspor produk olahan diprediksi melonjak dibanding ekspor mentah. Pemerintah meyakini kebijakan ini akan menambah lapangan kerja dan nilai tambah di dalam negeri.' },
       { type: 'quote', text: 'Kami melihat ada momentum yang sangat baik. Investasi terus mengalir, dan daya beli masyarakat perlahan pulih sejalan dengan pengendalian inflasi.' },
@@ -405,6 +405,18 @@ export const articles: Article[] = [
     isFeatured: false,
   },
 ];
+
+export function getSearchIndex(): SearchIndexItem[] {
+  return articles
+    .map(({ slug, title, category, publishedAt, thumbnailUrl }) => ({
+      slug,
+      title,
+      category,
+      publishedAt,
+      thumbnailUrl,
+    }))
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+}
 
 export function getArticleBySlug(slug: string): Article | undefined {
   return articles.find((a) => a.slug === slug);

@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import { ThemeProvider } from '@/components/providers/theme-provider';
 
 const fontSerif = localFont({
   src: './fonts/fraunces-latin.woff2',
@@ -47,9 +48,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className={`${fontSerif.variable} ${fontSans.variable}`}>
-      <body className="font-sans bg-paper text-ink antialiased">
-        {children}
+    <html
+      lang="id"
+      className={`${fontSerif.variable} ${fontSans.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="font-sans bg-background text-foreground antialiased selection:bg-brand/20 selection:text-foreground">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          enableColorScheme
+          disableTransitionOnChange={false}
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

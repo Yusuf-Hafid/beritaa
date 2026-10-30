@@ -52,15 +52,18 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     <>
       {/* ── Category hero header ── */}
       <div
-        className="relative overflow-hidden border-b border-line"
+        className="relative overflow-hidden border-b border-border"
         style={{
-          background: `linear-gradient(135deg, hsl(var(--ink)) 0%, ${category.color} 100%)`,
+          background: `linear-gradient(135deg, hsl(222 24% 8%) 0%, ${category.color} 100%)`,
         }}
       >
         {/* Noise texture overlay */}
         <div
           className="absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\' /%3E%3C/svg%3E")' }}
+          style={{
+            backgroundImage:
+              'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\' /%3E%3C/svg%3E")',
+          }}
           aria-hidden
         />
 
@@ -68,19 +71,23 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           <Breadcrumb items={[{ label: category.name }]} />
           <div className="relative pb-10 pt-2">
             {/* Category label */}
-            <p className="eyebrow text-white/60">Kategori Berita</p>
+            <p className="eyebrow text-white/70">Kategori Berita</p>
 
             {/* Category name */}
             <h1 className="mt-2 font-serif text-display font-black tracking-tight text-white">
               {category.name}
             </h1>
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-white/70">
+            <p className="mt-3 max-w-2xl text-base leading-relaxed text-white/80">
               {category.description}
             </p>
 
             {/* Sub-topic pills */}
             {subTopiks.length > 0 && (
-              <div className="mt-6 flex flex-wrap gap-2" role="list" aria-label="Filter sub-topik">
+              <div
+                className="mt-6 flex flex-wrap gap-2"
+                role="list"
+                aria-label="Filter sub-topik"
+              >
                 {subTopiks.map((topik, idx) => (
                   <Link
                     key={topik}
@@ -89,8 +96,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                     className={cn(
                       'rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition-all',
                       idx === 0
-                        ? 'bg-white text-ink shadow-lg'
-                        : 'border border-white/20 text-white/80 hover:bg-white/10'
+                        ? 'bg-white text-neutral-900 shadow-lg'
+                        : 'border border-white/20 text-white/85 hover:bg-white/10'
                     )}
                   >
                     {topik}
@@ -105,12 +112,11 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       {/* ── Articles + sidebar ── */}
       <Container className="py-12">
         <div className="grid gap-10 lg:grid-cols-3">
-
           {/* Article grid */}
           <div className="lg:col-span-2">
             {categoryArticles.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-line p-16 text-center">
-                <p className="text-muted-warm">
+              <div className="rounded-2xl border border-dashed border-border p-16 text-center">
+                <p className="text-muted-foreground">
                   Belum ada artikel di kategori ini. Silakan kembali nanti.
                 </p>
               </div>

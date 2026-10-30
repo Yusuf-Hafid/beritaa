@@ -22,7 +22,7 @@ export function SectionTitle({
   className,
 }: SectionTitleProps) {
   return (
-    <div className={cn('border-b border-line pb-3', className)}>
+    <div className={cn('border-b border-border pb-3', className)}>
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
           {kicker && (
@@ -41,7 +41,7 @@ export function SectionTitle({
             />
             <h2
               id={id}
-              className="truncate font-serif text-h2 font-black tracking-tight text-ink"
+              className="truncate font-serif text-h2 font-black tracking-tight text-foreground"
             >
               {title}
             </h2>

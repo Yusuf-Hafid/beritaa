@@ -69,7 +69,7 @@
     /* ── Motion ── */
     --ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-    --shadow-lift: 0 24px 48px -16px hsl(220 14% 8% / 0.2), 0 6px 16px hsl(220 14% 8% / 0.08);
+    --shadow-lift: 0 24px 48px -16px hsl(220 14% 8% / 0.16), 0 6px 16px hsl(220 14% 8% / 0.08);
     --shadow-card: 0 1px 3px hsl(220 14% 8% / 0.06), 0 4px 12px hsl(220 14% 8% / 0.04);
   }
 
@@ -85,7 +85,7 @@
     --secondary: 222 12% 16%;
     --secondary-foreground: 210 20% 96%;
     --muted: 222 12% 14%;
-    --muted-foreground: 220 8% 58%;
+    --muted-foreground: 220 8% 65%;
     --accent: 186 90% 50%;
     --accent-foreground: 222 18% 6%;
     --destructive: 3 75% 55%;
@@ -102,7 +102,7 @@
     --surface-dim: 222 16% 8%;
     --line: 222 12% 18%;
     --line-soft: 222 12% 14%;
-    --muted-warm: 220 8% 58%;
+    --muted-warm: 220 8% 65%;
     --brand: 220 85% 60%;
     --brand-dark: 220 85% 45%;
     --breaking: 3 80% 58%;
@@ -126,11 +126,39 @@
 
   html {
     scroll-behavior: smooth;
+    /* Keep native UI (scrollbars, form controls) in sync from the first paint */
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* ── Theme swap color transition ──
+     Scoped to the properties that actually change with the theme so transform /
+     opacity animations (cards, slider, reveal) keep their own timing. Because
+     this lives in the base layer, any `transition-*` utility or component class
+     (e.g. .card-lift, .slider__slide) still wins. */
+  body,
+  body * {
+    transition-property: background-color, color, border-color, fill, stroke;
+    transition-duration: 0.22s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── Hard stop for the color transition while the radial reveal runs ──
+     A CSS transition starting mid-animation is what made colors arrive late /
+     out of sync with the clip-path circle. */
+  [data-theme-switching='true'],
+  [data-theme-switching='true'] *,
+  [data-theme-switching='true'] *::before,
+  [data-theme-switching='true'] *::after {
+    transition: none !important;
   }
 
   ::selection {
-    background-color: hsl(var(--brand) / 0.18);
-    color: hsl(var(--ink));
+    background-color: hsl(var(--brand) / 0.25);
+    color: hsl(var(--foreground));
   }
 
   :where(a, button, input, select, textarea):focus-visible {
@@ -148,7 +176,46 @@
   }
 }
 
+/* ── View Transitions API (Radial / Circular Theme Transition) ── */
+::view-transition-group(root) {
+  animation: none;
+  isolation: isolate;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 9999;
+  /* Snap the circular reveal to a crisp edge instead of blending layers */
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
 @layer components {
+
+  /* ── Scroll Reveal ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px) translateZ(0);
+    transition: opacity 0.7s var(--ease-editorial), transform 0.7s var(--ease-editorial);
+    will-change: opacity, transform;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
 
   /* ── Skip link ── */
   .skip-link {
@@ -157,8 +224,8 @@
     left: 0.75rem;
     z-index: 9999;
     transform: translateY(-150%);
-    background: hsl(var(--ink));
-    color: hsl(var(--paper));
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
     padding: 0.625rem 1.125rem;
     font-size: 0.75rem;
     font-weight: 700;
@@ -186,29 +253,40 @@
   }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-  /* ── Card lift ── */
+  /* ── Card lift without jitter ── */
   .card-lift {
     transition: transform 0.35s var(--ease-editorial), box-shadow 0.35s var(--ease-editorial);
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-font-smoothing: subpixel-antialiased;
   }
   .card-lift:hover {
-    transform: translateY(-3px);
+    transform: translateY(-4px) translateZ(0);
     box-shadow: var(--shadow-lift);
   }
 
-  /* ── Card media ── */
-  .card-media { overflow: hidden; }
+  /* ── Card media & Zoom ── */
+  .card-media {
+    overflow: hidden;
+    position: relative;
+    background-color: hsl(var(--muted));
+    isolation: isolate;
+  }
   .card-media img {
-    transition: transform 0.6s var(--ease-editorial);
+    transition: transform 0.55s var(--ease-editorial);
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
   }
   article:hover .card-media img,
   a:hover .card-media img {
-    transform: scale(1.06);
+    transform: scale(1.045) translateZ(0);
   }
 
   /* ── Animate rise ── */
   @keyframes rise {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(20px) translateZ(0); }
+    to   { opacity: 1; transform: translateY(0) translateZ(0); }
   }
   .animate-rise {
     animation: rise 0.65s var(--ease-editorial) both;
@@ -234,16 +312,98 @@
     animation: shimmer 1.6s infinite;
   }
 
-  /* ── Ticker scroll ── */
+  /* ── Ticker marquee ── */
   @keyframes ticker {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-50%, 0, 0); }
   }
-  .animate-ticker {
+  .ticker-viewport {
+    overflow: hidden;
+    position: relative;
+    mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+  }
+  .ticker-track {
     display: flex;
+    width: max-content;
     animation: ticker 40s linear infinite;
+    will-change: transform;
   }
-  .animate-ticker:hover { animation-play-state: paused; }
+  .ticker-track.is-paused,
+  .ticker-track:hover {
+    animation-play-state: paused;
+  }
+
+  /* ── Economy Slider Editorial Terminal Styling ── */
+  .slider {
+    position: relative;
+    background: hsl(222 24% 8%);
+    color: hsl(210 20% 96%);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-lift);
+  }
+  .slider__viewport {
+    position: relative;
+    width: 100%;
+    min-height: 440px;
+    overflow: hidden;
+    outline: none;
+  }
+  @media (min-width: 640px) {
+    .slider__viewport {
+      min-height: 480px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .slider__viewport {
+      min-height: 520px;
+    }
+  }
+  .slider__track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+  }
+  .slider__slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s var(--ease-editorial);
+    z-index: 1;
+  }
+  .slider__slide.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 2;
+  }
+  .slider__media {
+    position: absolute;
+    inset: 0;
+    background-color: hsl(222 20% 12%);
+    overflow: hidden;
+  }
+  .slider__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      hsl(222 24% 8% / 0.25) 0%,
+      hsl(222 24% 8% / 0.65) 45%,
+      hsl(222 24% 8% / 0.98) 95%
+    );
+    pointer-events: none;
+  }
+  .slider__content {
+    position: relative;
+    z-index: 10;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
 
   /* ── Gradient text ── */
   .gradient-text {
@@ -255,10 +415,10 @@
 
   /* ── Glass surface ── */
   .glass {
-    background: hsl(var(--paper-elevated) / 0.85);
+    background: hsl(var(--card) / 0.85);
     backdrop-filter: blur(16px) saturate(1.4);
     -webkit-backdrop-filter: blur(16px) saturate(1.4);
-    border: 1px solid hsl(var(--line) / 0.6);
+    border: 1px solid hsl(var(--border) / 0.6);
   }
 
   /* ── Breaking badge pill ── */
@@ -273,7 +433,7 @@
     letter-spacing: 0.18em;
     text-transform: uppercase;
     padding: 0.25rem 0.625rem;
-    border-radius: 2px;
+    border-radius: 4px;
   }
 
   /* ── Section divider ── */
@@ -295,12 +455,12 @@
   .prose-indonews > p {
     font-size: 1.0625rem;
     line-height: 1.82;
-    color: hsl(var(--ink-soft));
+    color: hsl(var(--muted-foreground));
     margin-bottom: 1.5rem;
   }
   .prose-indonews > p:first-of-type {
     font-size: 1.175rem;
-    color: hsl(var(--ink));
+    color: hsl(var(--foreground));
     font-weight: 500;
   }
   .prose-indonews > p:first-of-type::first-letter {
@@ -318,14 +478,14 @@
     font-size: 1.5rem;
     font-weight: 800;
     margin: 2.25rem 0 0.875rem;
-    color: hsl(var(--ink));
+    color: hsl(var(--foreground));
     letter-spacing: -0.015em;
   }
   .prose-indonews > blockquote {
     border-left: 3px solid hsl(var(--brand));
     padding: 1rem 1.5rem;
     margin: 2rem 0;
-    background: hsl(var(--surface-dim));
+    background: hsl(var(--muted));
     border-radius: 0 6px 6px 0;
   }
   .prose-indonews > blockquote p {
@@ -333,7 +493,7 @@
     font-size: 1.2rem;
     font-style: italic;
     font-weight: 600;
-    color: hsl(var(--ink));
+    color: hsl(var(--foreground));
     margin: 0;
   }
   .prose-indonews figure img {
@@ -343,24 +503,8 @@
   }
   .prose-indonews figcaption {
     font-size: 0.75rem;
-    color: hsl(var(--muted-warm));
+    color: hsl(var(--muted-foreground));
     margin-top: 0.5rem;
     text-align: center;
   }
-
-  /* ── Warta prose (backward compat) ── */
-  .prose-warta > p { font-size: 1.0625rem; line-height: 1.82; color: hsl(var(--ink-soft)); margin-bottom: 1.5rem; }
-  .prose-warta > p:first-of-type { font-size: 1.175rem; color: hsl(var(--ink)); font-weight: 500; }
-  .prose-warta > p:first-of-type::first-letter {
-    float: left;
-    font-family: var(--font-serif), Georgia, serif;
-    font-size: 3.8rem;
-    font-weight: 900;
-    line-height: 0.82;
-    margin-right: 0.12em;
-    margin-top: 0.08em;
-    color: hsl(var(--brand));
-  }
-  .prose-warta figure img { width: 100%; border-radius: 6px; }
-  .prose-warta figcaption { font-size: 0.75rem; color: hsl(var(--muted-warm)); margin-top: 0.5rem; text-align: center; }
 }

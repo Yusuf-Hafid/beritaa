@@ -7,13 +7,19 @@ interface RevealProps {
   children: ReactNode;
   className?: string;
   delay?: number;
+  threshold?: number;
 }
 
 /**
  * Reveals content once it enters the viewport.
- * Uses IntersectionObserver + CSS transitions, no animation library.
+ * Uses IntersectionObserver + CSS transitions with editorial cubic-bezier easing.
  */
-export function Reveal({ children, className, delay = 0 }: RevealProps) {
+export function Reveal({
+  children,
+  className,
+  delay = 0,
+  threshold = 0.08,
+}: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -33,12 +39,12 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
           observer.disconnect();
         }
       },
-      { threshold: 0.08, rootMargin: '0px 0px -8% 0px' },
+      { threshold, rootMargin: '0px 0px -6% 0px' }
     );
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [threshold]);
 
   return (
     <div

@@ -1,12 +1,15 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CategoryBadge } from '@/components/ui/category-badge';
 import { formatWaktuRelatif } from '@/lib/format';
 import { cn } from '@/lib/utils';
+
+const AUTOPLAY_INTERVAL = 5000;
+const TOUCH_RESUME_DELAY = 4000;
 
 export interface EconomySlide {
   id: string;
@@ -29,13 +32,45 @@ interface EconomySliderProps {
 export function EconomySlider({ slides, className }: EconomySliderProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [autoplayPaused, setAutoplayPaused] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const touchStartX = useRef<number | null>(null);
   const lastSwipeAt = useRef(0);
-
-  if (slides.length === 0) return null;
+  const resumeTimer = useRef<number | null>(null);
 
   const total = slides.length;
   const hasMultiple = total > 1;
+
+  // Geser otomatis tiap 5 detik, berhenti saat pengguna berinteraksi.
+  useEffect(() => {
+    if (!hasMultiple || autoplayPaused) return;
+
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setDirection('next');
+      setActiveIndex((index) => (index + 1) % total);
+    }, AUTOPLAY_INTERVAL);
+
+    return () => window.clearInterval(timer);
+  }, [hasMultiple, autoplayPaused, total]);
+
+  useEffect(
+    () => () => {
+      if (resumeTimer.current !== null) {
+        window.clearTimeout(resumeTimer.current);
+      }
+    },
+    []
+  );
+
+  if (slides.length === 0) return null;
+
   const active = slides[activeIndex] ?? slides[0];
 
   const goTo = (index: number, dir: 'next' | 'prev' = 'next') => {
@@ -45,6 +80,14 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
 
   const next = () => goTo(activeIndex + 1, 'next');
   const prev = () => goTo(activeIndex - 1, 'prev');
+
+  const resumeAutoplayLater = () => {
+    if (resumeTimer.current !== null) window.clearTimeout(resumeTimer.current);
+    resumeTimer.current = window.setTimeout(
+      () => setAutoplayPaused(false),
+      TOUCH_RESUME_DELAY
+    );
+  };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'ArrowRight') {
@@ -64,6 +107,7 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
 
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     touchStartX.current = event.touches[0]?.clientX ?? null;
+    setAutoplayPaused(true);
   };
 
   const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
@@ -74,6 +118,8 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
       touchStartX.current;
     touchStartX.current = null;
 
+    resumeAutoplayLater();
+
     if (Math.abs(delta) < 40 || !hasMultiple) return;
 
     lastSwipeAt.current = Date.now();
@@ -83,11 +129,15 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
 
   return (
     <section
-      className={cn('slider border border-line/60', className)}
+      className={cn('slider border border-border/80', className)}
       aria-labelledby="breaking-ekonomi-title"
       data-direction={direction}
+      onMouseEnter={() => setAutoplayPaused(true)}
+      onMouseLeave={() => setAutoplayPaused(false)}
+      onFocusCapture={() => setAutoplayPaused(true)}
+      onBlurCapture={() => setAutoplayPaused(false)}
     >
-      <div className="border-b border-paper/15 px-5 py-5 sm:px-7 sm:py-6 lg:px-9">
+      <div className="border-b border-white/10 px-5 py-5 sm:px-7 sm:py-6 lg:px-9 bg-black/20">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow flex items-center gap-2 text-brand">
@@ -99,7 +149,7 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
             </p>
             <h2
               id="breaking-ekonomi-title"
-              className="mt-2 font-serif text-h2 font-black tracking-tight text-paper"
+              className="mt-2 font-serif text-h2 font-black tracking-tight text-white"
             >
               Breaking Ekonomi
             </h2>
@@ -107,7 +157,7 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
 
           <div className="flex items-center gap-3">
             <p
-              className="text-kicker font-extrabold tabular-nums text-paper/60"
+              className="text-kicker font-extrabold tabular-nums text-white/70"
               aria-hidden
             >
               {String(activeIndex + 1).padStart(2, '0')} /{' '}
@@ -119,7 +169,7 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
                   type="button"
                   onClick={prev}
                   aria-label="Slide sebelumnya"
-                  className="inline-flex h-10 w-10 items-center justify-center border border-paper/25 text-paper transition-colors hover:border-paper hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 text-white transition-all hover:border-white hover:bg-white hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   <ChevronLeft className="h-4 w-4" aria-hidden />
                 </button>
@@ -127,7 +177,7 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
                   type="button"
                   onClick={next}
                   aria-label="Slide berikutnya"
-                  className="inline-flex h-10 w-10 items-center justify-center border border-paper/25 text-paper transition-colors hover:border-paper hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 text-white transition-all hover:border-white hover:bg-white hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   <ChevronRight className="h-4 w-4" aria-hidden />
                 </button>
@@ -181,14 +231,27 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
                   }}
                 >
                   <div className="slider__media">
-                    <Image
-                      src={slide.thumbnailUrl}
-                      alt={slide.thumbnailAlt}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1200px"
-                      className="object-cover transition-transform duration-700 ease-editorial group-hover/slide:scale-[1.03]"
-                      priority={index === 0}
-                    />
+                    {failedImages[slide.id] ? (
+                      <div
+                        className="absolute inset-0 bg-neutral-800"
+                        aria-hidden
+                      />
+                    ) : (
+                      <Image
+                        src={slide.thumbnailUrl}
+                        alt={slide.thumbnailAlt}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1200px"
+                        className="object-cover transition-transform duration-700 ease-editorial group-hover/slide:scale-[1.03]"
+                        priority={index === 0}
+                        onError={() =>
+                          setFailedImages((previous) => ({
+                            ...previous,
+                            [slide.id]: true,
+                          }))
+                        }
+                      />
+                    )}
                     <div className="slider__overlay" />
                   </div>
 
@@ -197,24 +260,24 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
                       <div className="max-w-3xl">
                         <div className="flex flex-wrap items-center gap-3">
                           <CategoryBadge slug={slide.category} asLink={false} />
-                          <span className="text-kicker font-extrabold uppercase text-paper/70">
+                          <span className="text-kicker font-extrabold uppercase text-white/80">
                             {formatWaktuRelatif(slide.publishedAt)}
                           </span>
                         </div>
 
-                        <h3 className="mt-3 line-clamp-3 font-serif text-3xl font-black leading-[1.05] text-paper text-balance sm:text-4xl lg:text-5xl">
+                        <h3 className="mt-3 line-clamp-3 font-serif text-3xl font-black leading-[1.05] text-white text-balance sm:text-4xl lg:text-5xl group-hover/slide:text-brand-light transition-colors">
                           {slide.title}
                         </h3>
 
-                        <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-relaxed text-paper/75 sm:text-base">
+                        <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-relaxed text-white/85 sm:text-base">
                           {slide.excerpt}
                         </p>
 
-                        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-kicker font-extrabold uppercase text-paper/65">
+                        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-kicker font-extrabold uppercase text-white/75">
                           <span>{slide.authorName}</span>
                           <span aria-hidden>·</span>
                           <span>{slide.readTime} menit baca</span>
-                          <span className="ml-auto hidden items-center gap-1.5 text-paper transition-colors group-hover/slide:text-brand sm:inline-flex">
+                          <span className="ml-auto hidden items-center gap-1.5 text-white transition-colors group-hover/slide:text-brand-light sm:inline-flex">
                             Baca selengkapnya
                             <ArrowRight
                               className="h-3.5 w-3.5 transition-transform duration-300 ease-editorial group-hover/slide:translate-x-1"
@@ -232,7 +295,7 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4 border-t border-paper/15 px-5 py-4 sm:px-7 lg:px-9">
+      <div className="flex items-center justify-between gap-4 border-t border-white/10 px-5 py-4 sm:px-7 lg:px-9 bg-black/20">
         <div
           className="flex items-center gap-2"
           role="group"
@@ -244,17 +307,15 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
               type="button"
               aria-label={`Slide ${index + 1}: ${slide.title}`}
               aria-current={index === activeIndex ? 'true' : undefined}
-              onClick={() =>
-                goTo(index, index > activeIndex ? 'next' : 'prev')
-              }
-              className="group/dot flex h-8 items-center justify-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+              onClick={() => goTo(index, index > activeIndex ? 'next' : 'prev')}
+              className="group/dot flex h-8 items-center justify-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               <span
                 className={cn(
                   'h-1.5 rounded-full transition-all duration-300 ease-editorial',
                   index === activeIndex
                     ? 'w-8 bg-brand'
-                    : 'w-2.5 bg-paper/25 group-hover/dot:bg-paper/50',
+                    : 'w-2.5 bg-white/30 group-hover/dot:bg-white/60'
                 )}
               />
             </button>
@@ -263,7 +324,7 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
 
         <Link
           href="/ekonomi"
-          className="group inline-flex items-center gap-1.5 text-kicker font-extrabold uppercase text-paper/70 transition-colors hover:text-brand"
+          className="group inline-flex items-center gap-1.5 text-kicker font-extrabold uppercase text-white/80 transition-colors hover:text-white"
         >
           Semua ekonomi
           <ArrowRight

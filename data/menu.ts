@@ -48,10 +48,10 @@ export const footerLinkGroups = [
   {
     title: 'Tentang INDONEWS',
     links: [
-      { label: 'Tentang Kami', href: '#' },
-      { label: 'Redaksi', href: '#' },
-      { label: 'Pedoman Media', href: '#' },
-      { label: 'Karier', href: '#' },
+      { label: 'Tentang Kami', href: '/tentang-kami' },
+      { label: 'Redaksi', href: '/redaksi' },
+      { label: 'Pedoman Media', href: '/pedoman-media' },
+      { label: 'Karier', href: '/karier' },
     ],
   },
   {
@@ -66,10 +66,10 @@ export const footerLinkGroups = [
   {
     title: 'Layanan',
     links: [
-      { label: 'Langganan', href: '#' },
-      { label: 'Newsletter', href: '#' },
-      { label: 'Iklan', href: '#' },
-      { label: 'Arsip', href: '#' },
+      { label: 'Langganan', href: '/langganan' },
+      { label: 'Newsletter', href: '/newsletter' },
+      { label: 'Iklan', href: '/iklan' },
+      { label: 'Arsip', href: '/arsip' },
     ],
   },
 ];

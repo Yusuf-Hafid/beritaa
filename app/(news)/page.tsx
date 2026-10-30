@@ -64,18 +64,20 @@ export default function HomePage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="pb-2 pt-8 sm:pt-10">
+      <section className="pb-4 pt-8 sm:pt-10">
         <Container>
-          <HeroStory
-            lead={lead}
-            subStories={subStories}
-            stripStories={stripStories}
-          />
+          <Reveal>
+            <HeroStory
+              lead={lead}
+              subStories={subStories}
+              stripStories={stripStories}
+            />
+          </Reveal>
         </Container>
       </section>
 
       {/* ── Economy Slider ── */}
-      <div className="py-10 bg-surface-dim">
+      <div className="py-12 bg-muted/30 border-y border-border/40">
         <Container>
           <Reveal>
             <EconomySlider slides={economySlides} />
@@ -84,13 +86,13 @@ export default function HomePage() {
       </div>
 
       {/* ── Main content + sidebar ── */}
-      <Container className="py-14">
+      <Container className="py-14 sm:py-16">
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-10">
           {/* Main categories */}
           <div className="lg:col-span-8">
-            <div className="divide-y divide-line">
+            <div className="divide-y divide-border">
               {homeCategories.map((slug, index) => (
-                <Reveal key={slug} delay={index * 70}>
+                <Reveal key={slug} delay={index * 60}>
                   <CategorySection categorySlug={slug} index={index} />
                 </Reveal>
               ))}

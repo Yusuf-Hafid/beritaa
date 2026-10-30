@@ -47,6 +47,14 @@ export interface ArticleContent {
   imageAlt?: string;
 }
 
+export interface SearchIndexItem {
+  slug: string;
+  title: string;
+  category: CategorySlug;
+  publishedAt: string;
+  thumbnailUrl: string;
+}
+
 export interface NavItem {
   label: string;
   href: string;

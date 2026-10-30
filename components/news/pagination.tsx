@@ -8,7 +8,6 @@ interface PaginationProps {
   className?: string;
 }
 
-// TODO(pagination): hanya UI — belum terhubung ke data dinamis
 export function Pagination({ currentPage, totalPages, className }: PaginationProps) {
   if (totalPages <= 1) return null;
 
@@ -17,19 +16,19 @@ export function Pagination({ currentPage, totalPages, className }: PaginationPro
   return (
     <nav
       aria-label="Navigasi halaman"
-      className={cn('flex items-center justify-center gap-1', className)}
+      className={cn('flex items-center justify-center gap-1.5', className)}
     >
       <Link
         href="#"
         aria-label="Halaman sebelumnya"
-        className="flex h-9 items-center justify-center rounded-md border border-line px-3 text-sm text-ink transition-colors hover:border-teal hover:text-teal"
+        className="flex h-9 items-center justify-center rounded-lg border border-border px-3 text-sm text-foreground transition-all hover:border-brand hover:text-brand hover:bg-muted/40"
       >
         <ChevronLeft className="h-4 w-4" aria-hidden />
       </Link>
 
       {pages.map((page, idx) =>
         page === '...' ? (
-          <span key={`gap-${idx}`} className="px-2 text-muted-warm">
+          <span key={`gap-${idx}`} className="px-2 text-muted-foreground">
             &hellip;
           </span>
         ) : (
@@ -39,10 +38,10 @@ export function Pagination({ currentPage, totalPages, className }: PaginationPro
             aria-label={`Halaman ${page}`}
             aria-current={page === currentPage ? 'page' : undefined}
             className={cn(
-              'flex h-9 min-w-9 items-center justify-center rounded-md border px-3 text-sm font-medium transition-colors',
+              'flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-xs font-bold transition-all',
               page === currentPage
-                ? 'border-brand bg-brand text-white'
-                : 'border-line text-ink hover:border-teal hover:text-teal',
+                ? 'border-brand bg-brand text-white shadow-sm'
+                : 'border-border text-foreground hover:border-brand hover:text-brand hover:bg-muted/40',
             )}
           >
             {page}
@@ -53,7 +52,7 @@ export function Pagination({ currentPage, totalPages, className }: PaginationPro
       <Link
         href="#"
         aria-label="Halaman berikutnya"
-        className="flex h-9 items-center justify-center rounded-md border border-line px-3 text-sm text-ink transition-colors hover:border-teal hover:text-teal"
+        className="flex h-9 items-center justify-center rounded-lg border border-border px-3 text-sm text-foreground transition-all hover:border-brand hover:text-brand hover:bg-muted/40"
       >
         <ChevronRight className="h-4 w-4" aria-hidden />
       </Link>
