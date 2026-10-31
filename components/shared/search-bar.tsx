@@ -10,6 +10,31 @@ import { getCategory } from '@/data/categories';
 import { formatWaktuRelatif } from '@/lib/format';
 import type { SearchIndexItem } from '@/lib/types';
 
+/** Lowercase, strip diacritics, and collapse whitespace so comparisons are stable. */
+const normalize = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * Matches `keyword` only at the start of a word, so "i" finds "Internasional"
+ * but not "Teknologi". Multi-word queries ("ekonomi hijau") still match when
+ * the phrase begins at any word boundary.
+ */
+function matchWordPrefix(text: string, keyword: string) {
+  if (!text || !keyword) return false;
+  const words = normalize(text).split(' ');
+  const singleWord = !keyword.includes(' ');
+  for (let i = 0; i < words.length; i += 1) {
+    const candidate = singleWord ? words[i] : words.slice(i).join(' ');
+    if (candidate.startsWith(keyword)) return true;
+  }
+  return false;
+}
+
 interface SearchBarProps extends React.InputHTMLAttributes<HTMLInputElement> {
   items?: SearchIndexItem[];
   onClear?: () => void;
@@ -36,12 +61,20 @@ export function SearchBar({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
-  const keyword = query.trim().toLowerCase();
+  const keyword = normalize(query);
 
   const results = useMemo(() => {
     if (!keyword) return [];
     return items
-      .filter((item) => item.title.toLowerCase().includes(keyword))
+      .filter((item) => {
+        const categoryName =
+          getCategory(item.category)?.name ?? item.category.replace(/-/g, ' ');
+        return (
+          matchWordPrefix(item.title, keyword) ||
+          matchWordPrefix(categoryName, keyword) ||
+          matchWordPrefix(item.category.replace(/-/g, ' '), keyword)
+        );
+      })
       .slice(0, maxResults);
   }, [items, keyword, maxResults]);
 
