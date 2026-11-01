@@ -177,22 +177,30 @@
 }
 
 /* ── View Transitions API (Radial / Circular Theme Transition) ── */
+::view-transition {
+  pointer-events: none;
+}
+
 ::view-transition-group(root) {
   animation: none;
   isolation: isolate;
 }
 ::view-transition-old(root),
 ::view-transition-new(root) {
+  /* The browser cross-fade is replaced by the clip-path wipe that ThemeSwitcher
+     runs on ::view-transition-new(root). Both snapshots stay visible: the old
+     one sits underneath, the new one is clipped open over it. */
   animation: none;
   mix-blend-mode: normal;
 }
+
+/* Keep the stacking semantic (incoming theme above outgoing) without parking a
+   top-layer at 9999, which makes the reveal read as a sheet laid over the page. */
 ::view-transition-old(root) {
   z-index: 1;
 }
 ::view-transition-new(root) {
-  z-index: 9999;
-  /* Snap the circular reveal to a crisp edge instead of blending layers */
-  overflow: clip;
+  z-index: 2;
 }
 
 @media (prefers-reduced-motion: reduce) {

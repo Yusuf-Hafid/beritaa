@@ -15,9 +15,10 @@ interface ViewTransitionLike {
 
 type StartViewTransition = (callback: () => void) => ViewTransitionLike;
 
-const SWITCH_DURATION = 520;
+const REVEAL_EXPAND_MS = 300;
 const SWITCH_EASING = 'cubic-bezier(0.4, 0, 0.2, 1)';
 const SWITCHING_ATTR = 'data-theme-switching';
+const REVEAL_FAILSAFE_MS = REVEAL_EXPAND_MS + 400;
 
 interface ThemeSwitcherProps {
   className?: string;
@@ -68,68 +69,82 @@ export function ThemeSwitcher({ className, variant = 'icon' }: ThemeSwitcherProp
       document as unknown as { startViewTransition?: StartViewTransition }
     ).startViewTransition;
 
-    setPendingTheme(nextTheme);
-
-    if (!startViewTransition || reduceMotion) {
-      applyThemeToDom(nextTheme);
-      setTheme(nextTheme);
-      return;
-    }
-
-    // Use the real pointer position; fall back to the button centre for
-    // keyboard activation (detail === 0) or missing coordinates.
+    // Cache every layout read before touching the DOM. Nothing below this
+    // block reads geometry again, so the animation cannot thrash layout.
     const rect = event.currentTarget.getBoundingClientRect();
     const isPointer = event.detail !== 0;
     const x = isPointer ? event.clientX : rect.left + rect.width / 2;
     const y = isPointer ? event.clientY : rect.top + rect.height / 2;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
     const endRadius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
+      Math.max(x, viewportWidth - x),
+      Math.max(y, viewportHeight - y)
     );
 
-    root.setAttribute(SWITCHING_ATTR, 'true');
+    setPendingTheme(nextTheme);
 
-    let transition: ViewTransitionLike;
-    try {
-      transition = startViewTransition.call(document, () => {
-        applyThemeToDom(nextTheme);
-        // flushSync so next-themes persists the choice before the new
-        // snapshot is captured, without adding another visual update.
-        flushSync(() => setTheme(nextTheme));
-      });
-    } catch {
-      root.removeAttribute(SWITCHING_ATTR);
+    if (!startViewTransition || reduceMotion) {
       applyThemeToDom(nextTheme);
-      setTheme(nextTheme);
+      flushSync(() => setTheme(nextTheme));
       return;
     }
 
-    transition.ready
-      .then(() => {
-        root.animate(
+    root.setAttribute(SWITCHING_ATTR, 'true');
+
+    let failsafe = 0;
+    const cleanup = () => {
+      window.clearTimeout(failsafe);
+      root.removeAttribute(SWITCHING_ATTR);
+    };
+
+    // The circle is a clip opened on the *incoming* root snapshot, so the real
+    // content of the new theme expands over the old one. No opaque layer is
+    // ever placed above the page, and clipping a top-layer pseudo does not
+    // repaint what is underneath - that is what keeps this at 60fps.
+    const reveal = () => {
+      document.documentElement
+        .animate(
           {
+            // Viewport coordinates: ::view-transition-new(root) is pinned to the
+            // viewport origin, so clientX/clientY map 1:1 onto the circle
+            // centre. Both were cached above, so no layout read happens here.
             clipPath: [
               `circle(0px at ${x}px ${y}px)`,
               `circle(${endRadius}px at ${x}px ${y}px)`,
             ],
           },
           {
-            duration: SWITCH_DURATION,
+            duration: REVEAL_EXPAND_MS,
             easing: SWITCH_EASING,
             fill: 'both',
             pseudoElement: '::view-transition-new(root)',
           }
-        );
-      })
-      .catch(() => {
-        /* transition skipped — the theme is already applied */
+        )
+        .finished.then(cleanup)
+        .catch(cleanup);
+    };
+
+    try {
+      const transition = startViewTransition.call(document, () => {
+        applyThemeToDom(nextTheme);
+        // Force React to commit the next-themes update synchronously so the
+        // captured "new" snapshot already carries the target colors.
+        flushSync(() => setTheme(nextTheme));
       });
 
-    transition.finished
-      .catch(() => {})
-      .finally(() => {
-        root.removeAttribute(SWITCHING_ATTR);
-      });
+      // Safety net: Web Animation / transition promises can stall (background
+      // tab, throttled compositor). Leaving SWITCHING_ATTR behind would freeze
+      // every CSS transition on the page for good.
+      failsafe = window.setTimeout(cleanup, REVEAL_FAILSAFE_MS);
+
+      transition.ready.then(reveal).catch(cleanup);
+      transition.finished.then(cleanup).catch(cleanup);
+    } catch {
+      applyThemeToDom(nextTheme);
+      flushSync(() => setTheme(nextTheme));
+      cleanup();
+    }
   };
 
   if (!mounted) {
@@ -162,7 +177,7 @@ export function ThemeSwitcher({ className, variant = 'icon' }: ThemeSwitcherProp
       <div className="relative h-5 w-5 flex-shrink-0">
         <Sun
           className={cn(
-            'absolute inset-0 h-5 w-5 transition-all duration-300 transform',
+            'absolute inset-0 h-5 w-5 transition-[transform,opacity,color] duration-200 transform',
             isDark
               ? 'scale-100 rotate-0 text-amber-400 opacity-100'
               : 'scale-0 -rotate-90 opacity-0'
@@ -171,7 +186,7 @@ export function ThemeSwitcher({ className, variant = 'icon' }: ThemeSwitcherProp
         />
         <Moon
           className={cn(
-            'absolute inset-0 h-5 w-5 transition-all duration-300 transform',
+            'absolute inset-0 h-5 w-5 transition-[transform,opacity,color] duration-200 transform',
             isDark
               ? 'scale-0 rotate-90 opacity-0'
               : 'scale-100 rotate-0 text-foreground group-hover:text-brand opacity-100'
