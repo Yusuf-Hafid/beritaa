@@ -35,5 +35,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Folder
-/.bolt/
+# Folder confifuration
+/.agents/
+/.playwright-cli/
+
+# AI Configuration Files
+opencode.json
+skills-lock.json
