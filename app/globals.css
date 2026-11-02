@@ -379,7 +379,7 @@
     inset: 0;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.5s var(--ease-editorial);
+    transition: opacity 3s var(--ease-editorial);
     z-index: 1;
   }
   .slider__slide.is-active {
