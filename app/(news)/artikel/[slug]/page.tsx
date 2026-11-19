@@ -1,16 +1,17 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, Tag, Share2, Printer, Bookmark } from 'lucide-react';
+import { Clock, Tag, Share2 } from 'lucide-react';
 import { Container } from '@/components/ui/container';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { CategoryBadge } from '@/components/ui/category-badge';
 import { ArticleBody } from '@/components/news/article-body';
+import { MediaThumbnail } from '@/components/news/article-card';
 import { RelatedNews } from '@/components/news/related-news';
 import { Sidebar } from '@/components/news/sidebar';
-import { getArticleBySlug, articles, getRelatedArticles } from '@/data/articles';
+import { articles, getRelatedArticles } from '@/data/articles';
 import { getCategory } from '@/data/categories';
+import { getArticleBySlug } from '@/lib/get-articles';
 import { formatTanggal } from '@/lib/format';
 
 interface ArticlePageProps {
@@ -23,7 +24,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const article = getArticleBySlug(slug);
+  const article = await getArticleBySlug(slug);
   if (!article) return {};
   return {
     title: article.title,
@@ -41,7 +42,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
-  const article = getArticleBySlug(slug);
+  const article = await getArticleBySlug(slug);
   if (!article) notFound();
 
   const category = getCategory(article.category);
@@ -66,27 +67,18 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         <header className="animate-rise py-10">
           <CategoryBadge slug={article.category} />
 
-          <h1 className="mt-4 font-serif text-display font-black leading-[1.06] tracking-tight text-foreground text-balance">
+          <h1 className="mt-4 break-words font-serif text-display font-black leading-[1.06] tracking-tight text-foreground text-balance">
             {article.title}
           </h1>
-          <p className="mt-4 text-lg leading-relaxed text-muted-foreground max-w-2xl">
+          <p className="mt-4 break-words text-lg leading-relaxed text-muted-foreground max-w-2xl">
             {article.excerpt}
           </p>
 
           {/* ── Author & meta ── */}
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-4 shadow-card">
-            <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={article.author.avatarUrl}
-                alt={article.author.name}
-                className="h-11 w-11 rounded-full object-cover ring-2 ring-border"
-              />
-              <div>
-                <p className="text-sm font-bold text-foreground">{article.author.name}</p>
-                <p className="text-xs text-muted-foreground">{article.author.role}</p>
-              </div>
-            </div>
+            <p className="break-all text-sm font-bold text-foreground">
+              {article.author.name}
+            </p>
 
             <div className="flex flex-wrap items-center gap-4 text-[0.6875rem] text-muted-foreground font-bold uppercase tracking-[0.1em]">
               <span className="flex items-center gap-1.5">
@@ -109,21 +101,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               <Share2 className="h-3.5 w-3.5" aria-hidden />
               Bagikan
             </button>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-bold text-foreground transition-colors hover:border-brand hover:text-brand hover:bg-muted/40"
-            >
-              <Bookmark className="h-3.5 w-3.5" aria-hidden />
-              Simpan
-            </button>
-            <button
-              type="button"
-              aria-label="Cetak artikel"
-              className="flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-bold text-foreground transition-colors hover:border-brand hover:text-brand hover:bg-muted/40"
-            >
-              <Printer className="h-3.5 w-3.5" aria-hidden />
-              Cetak
-            </button>
           </div>
         </header>
       </Container>
@@ -131,10 +108,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       {/* ── Hero image ── */}
       <Container size="narrow">
         <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-muted shadow-lift">
-          <Image
+          <MediaThumbnail
             src={article.thumbnailUrl}
             alt={article.thumbnailAlt}
-            fill
             sizes="(max-width: 768px) 100vw, 820px"
             className="object-cover"
             priority
@@ -149,7 +125,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <Container className="py-12">
         <div className="grid gap-10 lg:grid-cols-3">
           {/* Main content */}
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-2">
             <ArticleBody content={article.content} />
 
             {/* Tags */}
@@ -173,22 +149,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               </div>
             )}
 
-            {/* Author bio card */}
-            <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-card">
-              <p className="eyebrow text-muted-foreground mb-3">Tentang Penulis</p>
-              <div className="flex items-center gap-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={article.author.avatarUrl}
-                  alt={article.author.name}
-                  className="h-14 w-14 rounded-full object-cover ring-2 ring-brand/20"
-                />
-                <div>
-                  <p className="font-serif text-lg font-bold text-foreground">{article.author.name}</p>
-                  <p className="text-sm text-muted-foreground">{article.author.role} · INDONEWS</p>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Sidebar */}

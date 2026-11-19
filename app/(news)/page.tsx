@@ -7,15 +7,12 @@ import {
 import { CategorySection } from '@/components/news/category-section';
 import { Sidebar } from '@/components/news/sidebar';
 import { Reveal } from '@/components/shared/reveal';
-import {
-  getFeaturedArticles,
-  articles,
-} from '@/data/articles';
+import { getHomepageArticles } from '@/lib/get-articles';
 import type { CategorySlug } from '@/lib/types';
 
-export default function HomePage() {
-  const featured = getFeaturedArticles();
-  const allArticles = articles;
+export default async function HomePage() {
+  const allArticles = await getHomepageArticles();
+  const featured = allArticles.filter((article) => article.isFeatured);
 
   const lead = featured[0] ?? allArticles[0];
   const byLatest = [...allArticles].sort(
@@ -40,26 +37,25 @@ export default function HomePage() {
     'teknologi',
   ];
 
-  const economySlideIds = ['a09', 'a04', 'a10', 'a11'];
-  const economySlides: EconomySlide[] = economySlideIds.flatMap((id) => {
-    const article = allArticles.find((item) => item.id === id);
-    if (!article) return [];
-
-    return [
-      {
-        id: article.id,
-        slug: article.slug,
-        title: article.title,
-        excerpt: article.excerpt,
-        category: article.category,
-        thumbnailUrl: article.thumbnailUrl,
-        thumbnailAlt: article.thumbnailAlt,
-        publishedAt: article.publishedAt,
-        readTime: article.readTime,
-        authorName: article.author.name,
-      },
-    ];
-  });
+  const economyArticles = allArticles.filter(
+    (article) => article.category === 'ekonomi',
+  );
+  const economySlides: EconomySlide[] = (
+    economyArticles.length > 0 ? economyArticles : allArticles
+  )
+    .slice(0, 4)
+    .map((article) => ({
+      id: article.id,
+      slug: article.slug,
+      title: article.title,
+      excerpt: article.excerpt,
+      category: article.category,
+      thumbnailUrl: article.thumbnailUrl,
+      thumbnailAlt: article.thumbnailAlt,
+      publishedAt: article.publishedAt,
+      readTime: article.readTime,
+      authorName: article.author.name,
+    }));
 
   return (
     <>

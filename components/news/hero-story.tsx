@@ -72,7 +72,7 @@ export function HeroStory({
                           {formatWaktuRelatif(article.publishedAt)}
                         </span>
                       </div>
-                      <h3 className="mt-1.5 line-clamp-2 font-serif text-base font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
+                      <h3 className="mt-1.5 line-clamp-3 font-serif text-base font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
                         {article.title}
                       </h3>
                     </div>
@@ -107,7 +107,7 @@ export function HeroStory({
               className="block p-5 sm:p-6 h-full hover:bg-muted/40 transition-colors"
             >
               <span className="eyebrow text-brand">0{index + 1}</span>
-              <h4 className="mt-2 line-clamp-2 font-serif text-lg font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
+              <h4 className="mt-2 line-clamp-3 font-serif text-lg font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
                 {article.title}
               </h4>
               <p className="mt-2 line-clamp-2 text-sm text-muted-foreground leading-relaxed">

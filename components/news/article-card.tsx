@@ -1,9 +1,12 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { CategoryBadge } from '@/components/ui/category-badge';
 import { formatWaktuRelatif } from '@/lib/format';
 import type { Article } from '@/lib/types';
+import { MediaThumbnail } from './media-thumbnail';
+
+export { MediaThumbnail };
+export { isVideoThumbnail } from './media-thumbnail';
 
 interface ArticleCardProps {
   article: Article;
@@ -107,10 +110,9 @@ function DefaultCard({
     >
       <Link href={`/artikel/${article.slug}`} className="flex h-full flex-col">
         <div className="card-media relative aspect-[16/10] overflow-hidden rounded-lg bg-muted shadow-sm">
-          <Image
+          <MediaThumbnail
             src={article.thumbnailUrl}
             alt={article.thumbnailAlt}
-            fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover transition-transform duration-500 ease-editorial group-hover:scale-105"
             priority={priority}
@@ -130,7 +132,7 @@ function DefaultCard({
             </span>
           </div>
 
-          <h3 className="mt-2 line-clamp-2 font-serif text-lg font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
+          <h3 className="mt-2 line-clamp-3 font-serif text-lg font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
             {article.title}
           </h3>
 
@@ -170,10 +172,9 @@ function LeadCard({
     >
       <Link href={`/artikel/${article.slug}`} className="block">
         <div className="card-media relative aspect-[16/10] overflow-hidden bg-neutral-900 sm:aspect-[16/9]">
-          <Image
+          <MediaThumbnail
             src={article.thumbnailUrl}
             alt={article.thumbnailAlt}
-            fill
             sizes="(max-width: 768px) 100vw, 66vw"
             className="object-cover transition-transform duration-700 ease-editorial group-hover:scale-105"
             priority={priority}
@@ -194,7 +195,7 @@ function LeadCard({
                 {formatWaktuRelatif(article.publishedAt)}
               </span>
             </div>
-            <Heading className="mt-2 font-serif text-display font-black leading-[1.04] tracking-tight text-white text-balance transition-colors group-hover:text-brand-light">
+            <Heading className="mt-2 line-clamp-4 font-serif text-display font-black leading-[1.04] tracking-tight text-white text-balance transition-colors group-hover:text-brand-light">
               {article.title}
             </Heading>
             <p className="mt-2 line-clamp-2 max-w-2xl text-base leading-relaxed text-white">
@@ -214,10 +215,10 @@ function LeadCard({
               {formatWaktuRelatif(article.publishedAt)}
             </span>
           </div>
-          <Heading className="mt-2 font-serif text-display-sm font-black leading-tight text-foreground transition-colors group-hover:text-brand">
+          <Heading className="mt-2 line-clamp-4 font-serif text-display-sm font-black leading-tight text-foreground transition-colors group-hover:text-brand">
             {article.title}
           </Heading>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
             {article.excerpt}
           </p>
           <div className="mt-3">
@@ -257,16 +258,15 @@ function CompactCard({
           </span>
         )}
         <div className="card-media relative aspect-[4/3] overflow-hidden rounded-md bg-muted flex-shrink-0 shadow-sm">
-          <Image
+          <MediaThumbnail
             src={article.thumbnailUrl}
             alt={article.thumbnailAlt}
-            fill
             sizes="84px"
             className="object-cover transition-transform duration-500 ease-editorial group-hover:scale-105"
           />
         </div>
         <div className="min-w-0">
-          <h4 className="line-clamp-2 font-serif text-[0.9375rem] font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
+          <h4 className="line-clamp-3 font-serif text-[0.9375rem] font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
             {article.title}
           </h4>
           <p className="mt-1.5 text-[0.6rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
@@ -295,10 +295,9 @@ function HorizontalCard({
     >
       <Link href={`/artikel/${article.slug}`} className="flex h-full flex-col sm:flex-row">
         <div className="card-media relative aspect-[16/10] w-full overflow-hidden bg-muted sm:aspect-auto sm:w-[42%] flex-shrink-0">
-          <Image
+          <MediaThumbnail
             src={article.thumbnailUrl}
             alt={article.thumbnailAlt}
-            fill
             sizes="(max-width: 640px) 100vw, 360px"
             className="object-cover transition-transform duration-500 ease-editorial group-hover:scale-105"
           />
@@ -349,10 +348,9 @@ function FeaturedCard({
     >
       <Link href={`/artikel/${article.slug}`} className="block">
         <div className="card-media relative aspect-[4/5] overflow-hidden bg-neutral-900 sm:aspect-[3/4]">
-          <Image
+          <MediaThumbnail
             src={article.thumbnailUrl}
             alt={article.thumbnailAlt}
-            fill
             sizes="(max-width: 640px) 50vw, 300px"
             className="object-cover transition-transform duration-700 ease-editorial group-hover:scale-105"
             priority={priority}

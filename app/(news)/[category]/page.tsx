@@ -7,13 +7,15 @@ import { ArticleCard } from '@/components/news/article-card';
 import { Sidebar } from '@/components/news/sidebar';
 import { Pagination } from '@/components/news/pagination';
 import { getCategory, categories } from '@/data/categories';
-import { getArticlesByCategory } from '@/data/articles';
+import { getArticlesByCategory } from '@/lib/get-articles';
 import { cn } from '@/lib/utils';
 import type { CategorySlug } from '@/lib/types';
 
 interface CategoryPageProps {
   params: Promise<{ category: string }>;
 }
+
+export const revalidate = 60;
 
 export function generateStaticParams() {
   return categories.map((c) => ({ category: c.slug }));
@@ -45,7 +47,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const category = getCategory(categorySlug);
   if (!category) notFound();
 
-  const categoryArticles = getArticlesByCategory(categorySlug);
+  const categoryArticles = await getArticlesByCategory(categorySlug);
   const subTopiks = subTopikMap[categorySlug] ?? [];
 
   return (
@@ -123,11 +125,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             ) : (
               <>
                 <div className="grid gap-6 sm:grid-cols-2">
-                  {categoryArticles.map((article) => (
+                  {categoryArticles.map((article, index) => (
                     <ArticleCard
                       key={article.id}
                       article={article}
                       variant="default"
+                      priority={index === 0}
                     />
                   ))}
                 </div>

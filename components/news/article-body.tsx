@@ -8,7 +8,7 @@ interface ArticleBodyProps {
 
 export function ArticleBody({ content, className }: ArticleBodyProps) {
   return (
-    <div className={cn('prose-indonews space-y-6', className)}>
+    <div className={cn('prose-indonews space-y-6 break-words', className)}>
       {content.map((block, idx) => {
         switch (block.type) {
           case 'heading':
