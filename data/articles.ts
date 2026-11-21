@@ -404,6 +404,63 @@ export const articles: Article[] = [
     isBreaking: false,
     isFeatured: false,
   },
+  {
+    id: 'a15',
+    slug: 'harga-beras-mulai-turun-inflasi-pangan-melandai-oktober',
+    title: 'Harga Beras Mulai Turun, Inflasi Pangan Melandai pada Oktober',
+    excerpt:
+      'Setelah tiga bulan bertahan tinggi, harga beras di pasar induk berangsur turun seiring masuknya panen raya dan lancarnya distribusi antar-daerah.',
+    content: [
+      { type: 'paragraph', text: 'Harga beras di sejumlah pasar induk mulai turun pada Oktober setelah tiga bulan bertahan di level tinggi. Badan Pangan Nasional mencatat penurunan rata-rata lima persen untuk kualitas medium, seiring masuknya panen raya di sentra produksi Jawa dan Sumatra.' },
+      { type: 'heading', text: 'Distribusi antar-daerah membaik' },
+      { type: 'paragraph', text: 'Perbaikan pasokan juga didorong oleh lancarnya distribusi antar-daerah. Sejumlah pemerintah daerah melaporkan stok gudang kembali di atas ambang aman, sehingga pedagang tidak lagi menahan barang untuk mengejar harga lebih tinggi.' },
+      { type: 'quote', text: 'Penurunan ini masih bertahap, tetapi arahnya sudah jelas. Kami terus memantau harga di tingkat pedagang dan konsumen.' },
+      { type: 'paragraph', text: 'Ekonom menilai melandainya inflasi pangan memberi ruang bagi bank sentral untuk menahan suku bunga acuan. Namun, mereka mengingatkan bahwa risiko cuaca ekstrem masih dapat mengubah gambaran pasokan pada kuartal berikutnya.' },
+      { type: 'paragraph', text: 'Pemerintah menyiapkan operasi pasar lanjutan sebagai langkah antisipasi. Fokusnya kini bergeser dari penambahan pasokan ke penguatan data stok dan harga harian agar gejolak dapat dideteksi lebih cepat.' },
+    ],
+    category: 'ekonomi',
+    author: {
+      id: 'u01',
+      name: 'Rangga Pratama',
+      role: 'Reporter Ekonomi',
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&crop=faces&q=80&w=96&h=96',
+    },
+    publishedAt: '2026-10-22T09:10:00+07:00',
+    readTime: 3,
+    thumbnailUrl: 'https://images.unsplash.com/photo-1601597111158-2fceff292cdc?auto=format&fit=crop&q=80&w=1200',
+    thumbnailAlt: 'Ilustrasi pergerakan harga pangan di pasar',
+    tags: ['ekonomi', 'inflasi', 'pangan'],
+    isBreaking: false,
+    isFeatured: false,
+  },
+  {
+    id: 'a16',
+    slug: 'ekspor-produk-olahan-naik-12-persen-kuartal-iii-2026',
+    title: 'Ekspor Produk Olahan Naik 12 Persen pada Kuartal III 2026',
+    excerpt:
+      'Hilirisasi mineral dan makanan olahan menjadi pendorong utama, meski pelaku usaha tetap waspada terhadap pelemahan permintaan dari pasar utama.',
+    content: [
+      { type: 'paragraph', text: 'Nilai ekspor produk olahan Indonesia tumbuh 12 persen pada kuartal III 2026 dibanding periode yang sama tahun lalu. Kementerian Perdagangan menyebut hilirisasi mineral serta makanan olahan sebagai dua penyumbang terbesar kenaikan tersebut.' },
+      { type: 'heading', text: 'Pasar tujuan mulai bergeser' },
+      { type: 'paragraph', text: 'Komposisi pasar tujuan juga bergeser. Selain Tiongkok dan Amerika Serikat, permintaan dari kawasan Timur Tengah dan Afrika Utara meningkat untuk produk makanan olahan dan bahan bangunan, membuka alternatif pasar yang lebih beragam.' },
+      { type: 'quote', text: 'Nilai tambah harus tetap tinggal di dalam negeri. Ekspor produk olahan adalah arah yang benar.' },
+      { type: 'paragraph', text: 'Meski begitu, pelaku usaha mengingatkan risiko pelemahan permintaan global. Biaya logistik dan ketidakpastian kebijakan perdagangan di sejumlah negara tujuan dinilai masih menjadi tantangan utama pada kuartal mendatang.' },
+    ],
+    category: 'ekonomi',
+    author: {
+      id: 'u01',
+      name: 'Rangga Pratama',
+      role: 'Reporter Ekonomi',
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&crop=faces&q=80&w=96&h=96',
+    },
+    publishedAt: '2026-10-21T11:20:00+07:00',
+    readTime: 3,
+    thumbnailUrl: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&q=80&w=1200',
+    thumbnailAlt: 'Peti kemas di terminal ekspor',
+    tags: ['ekonomi', 'ekspor', 'hilirisasi'],
+    isBreaking: false,
+    isFeatured: false,
+  },
 ];
 
 export function getSearchIndex(): SearchIndexItem[] {

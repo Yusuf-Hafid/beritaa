@@ -133,7 +133,7 @@ export function Header({ searchIndex = [] }: { searchIndex?: SearchIndexItem[] }
               onClick={() => setSearchOpen((v) => !v)}
               className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-brand sm:hidden lg:flex xl:hidden"
             >
-              {searchOpen ? <X size={18} /> : <Search size={18} />}
+              <Search size={18} />
             </button>
 
             {/* Search desktop */}

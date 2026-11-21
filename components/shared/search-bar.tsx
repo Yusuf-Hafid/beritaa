@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCategory } from '@/data/categories';
 import { formatWaktuRelatif } from '@/lib/format';
@@ -20,20 +20,11 @@ const normalize = (value: string) =>
     .trim();
 
 /**
- * Matches `keyword` only at the start of a word, so "i" finds "Internasional"
- * but not "Teknologi". Multi-word queries ("ekonomi hijau") still match when
- * the phrase begins at any word boundary.
+ * Strict prefix match: the normalized keyword must begin the normalized text,
+ * so "i" finds "Internasional" but not "Teknologi" or "Inflasi".
  */
-function matchWordPrefix(text: string, keyword: string) {
-  if (!text || !keyword) return false;
-  const words = normalize(text).split(' ');
-  const singleWord = !keyword.includes(' ');
-  for (let i = 0; i < words.length; i += 1) {
-    const candidate = singleWord ? words[i] : words.slice(i).join(' ');
-    if (candidate.startsWith(keyword)) return true;
-  }
-  return false;
-}
+const matchesPrefix = (text: string, keyword: string) =>
+  normalize(text).startsWith(keyword);
 
 interface SearchBarProps extends React.InputHTMLAttributes<HTMLInputElement> {
   items?: SearchIndexItem[];
@@ -44,7 +35,6 @@ interface SearchBarProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function SearchBar({
   items = [],
-  onClear,
   compact,
   className,
   maxResults = 6,
@@ -64,21 +54,22 @@ export function SearchBar({
   const keyword = normalize(query);
 
   const results = useMemo(() => {
-    if (!keyword) return [];
+    // Empty input lists every article so the dropdown is useful on focus.
+    if (!keyword) return items;
     return items
       .filter((item) => {
         const categoryName =
           getCategory(item.category)?.name ?? item.category.replace(/-/g, ' ');
         return (
-          matchWordPrefix(item.title, keyword) ||
-          matchWordPrefix(categoryName, keyword) ||
-          matchWordPrefix(item.category.replace(/-/g, ' '), keyword)
+          matchesPrefix(item.title, keyword) ||
+          matchesPrefix(categoryName, keyword) ||
+          matchesPrefix(item.category.replace(/-/g, ' '), keyword)
         );
       })
       .slice(0, maxResults);
   }, [items, keyword, maxResults]);
 
-  const isOpen = open && keyword.length > 0;
+  const isOpen = open && items.length > 0;
 
   // Close the dropdown when clicking outside of the search field.
   useEffect(() => {
@@ -95,13 +86,6 @@ export function SearchBar({
   const close = () => {
     setOpen(false);
     setActiveIndex(-1);
-  };
-
-  const clear = () => {
-    setQuery('');
-    close();
-    onClear?.();
-    inputRef.current?.focus();
   };
 
   return (
@@ -138,7 +122,7 @@ export function SearchBar({
           onChange?.(event);
         }}
         onFocus={(event) => {
-          if (keyword) setOpen(true);
+          setOpen(true);
           onFocus?.(event);
         }}
         onKeyDown={(event) => {
@@ -164,20 +148,10 @@ export function SearchBar({
           onKeyDown?.(event);
         }}
         className={cn(
-          'w-full rounded-full border border-border bg-muted/50 py-1.5 pl-9 pr-9 text-xs text-foreground placeholder:text-muted-foreground transition-all focus:border-brand focus:bg-background focus:outline-none focus:ring-2 focus:ring-brand/20',
+          'w-full rounded-full border border-border bg-muted/50 py-1.5 pl-9 pr-10 text-xs text-foreground placeholder:text-muted-foreground transition-all focus:border-brand focus:bg-background focus:outline-none focus:ring-2 focus:ring-brand/20',
           compact && 'cursor-pointer border-transparent bg-transparent',
         )}
       />
-      {(query.length > 0 || (onClear && !compact)) && (
-        <button
-          type="button"
-          onClick={clear}
-          aria-label="Hapus pencarian"
-          className="absolute right-3 text-muted-foreground hover:text-foreground"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      )}
 
       {isOpen && (
         <div
@@ -190,7 +164,7 @@ export function SearchBar({
             <ul
               id={listId}
               role="listbox"
-              aria-label="Hasil pencarian"
+              aria-label={keyword ? 'Hasil pencarian' : 'Semua berita'}
               className="max-h-[22rem] overflow-y-auto py-1"
             >
               {results.map((item, index) => {
@@ -243,8 +217,14 @@ export function SearchBar({
             </ul>
           ) : (
             <p className="px-4 py-5 text-xs leading-relaxed text-muted-foreground">
-              Tidak ada berita yang cocok dengan{' '}
-              <span className="font-semibold text-foreground">“{query.trim()}”</span>.
+              {keyword ? (
+                <>
+                  Tidak ada berita yang cocok dengan{' '}
+                  <span className="font-semibold text-foreground">“{query.trim()}”</span>.
+                </>
+              ) : (
+                'Belum ada berita untuk ditampilkan.'
+              )}
             </p>
           )}
         </div>

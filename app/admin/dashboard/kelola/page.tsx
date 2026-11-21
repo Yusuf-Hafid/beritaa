@@ -67,7 +67,7 @@ function sourceLabel(source: string | null): string {
 
 export default function KelolaArticlePage() {
   return (
-    <div>
+    <div data-kelola-page>
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[0.625rem] font-bold uppercase tracking-[0.22em] text-brand">

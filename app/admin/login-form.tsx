@@ -74,7 +74,7 @@ export function LoginForm() {
       }
 
       setIsRedirecting(true);
-      router.replace('/admin/dashboard/upload');
+      router.push('/admin/dashboard/upload');
     } catch {
       setError('Tidak dapat terhubung ke server. Periksa koneksi Anda.');
       setIsLoading(false);

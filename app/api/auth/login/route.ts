@@ -159,6 +159,22 @@ export async function POST(request: Request) {
     }
 
     const admin = (data ?? null) as AdminRow | null;
+
+    // A bcrypt hash is always 60 characters. A different length means the row
+    // was not written by bcrypt (common cause: a hash pasted into the SQL editor
+    // got mangled), which would otherwise surface only as "wrong password".
+    if (
+      admin &&
+      typeof admin.password_hash === 'string' &&
+      admin.password_hash.length !== 60
+    ) {
+      console.error(
+        '[admin-login] password_hash tidak valid: panjang ' +
+          admin.password_hash.length +
+          ' karakter, seharusnya 60. Perbaiki kolom password_hash di tabel admins.'
+      );
+    }
+
     const passwordMatches =
       admin && typeof admin.password_hash === 'string'
         ? await verifyPassword(credentials.passwordHash, admin.password_hash)
