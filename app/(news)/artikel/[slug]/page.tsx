@@ -1,25 +1,21 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Clock, Tag, Share2 } from 'lucide-react';
+import { Clock, Tag } from 'lucide-react';
 import { Container } from '@/components/ui/container';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { CategoryBadge } from '@/components/ui/category-badge';
 import { ArticleBody } from '@/components/news/article-body';
+import { PrintButton } from '@/components/news/print-button';
 import { MediaThumbnail } from '@/components/news/article-card';
 import { RelatedNews } from '@/components/news/related-news';
 import { Sidebar } from '@/components/news/sidebar';
-import { articles, getRelatedArticles } from '@/data/articles';
 import { getCategory } from '@/data/categories';
-import { getArticleBySlug } from '@/lib/get-articles';
+import { getArticleBySlug, getRelatedArticles } from '@/lib/get-articles';
 import { formatTanggal } from '@/lib/format';
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
-}
-
-export function generateStaticParams() {
-  return articles.map((a) => ({ slug: a.slug }));
 }
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
@@ -46,12 +42,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   if (!article) notFound();
 
   const category = getCategory(article.category);
-  const related = getRelatedArticles(article, 4);
+  const related = await getRelatedArticles(article, 4);
 
   return (
     <>
       {/* ── Breadcrumb ── */}
-      <div className="border-b border-border bg-muted/40">
+      <div className="border-b border-border bg-muted/40" data-print="hide">
         <Container>
           <Breadcrumb
             items={[
@@ -93,14 +89,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </div>
 
           {/* ── Action buttons ── */}
-          <div className="mt-4 flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              className="flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-bold text-foreground transition-colors hover:border-brand hover:text-brand hover:bg-muted/40"
-            >
-              <Share2 className="h-3.5 w-3.5" aria-hidden />
-              Bagikan
-            </button>
+          <div className="mt-4 flex items-center gap-2 flex-wrap" data-print="hide">
+            <PrintButton />
           </div>
         </header>
       </Container>
@@ -117,7 +107,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           />
         </div>
         <p className="mt-2.5 text-xs text-muted-foreground text-center">
-          {article.thumbnailAlt} · Foto: INDONEWS
+          {article.thumbnailAlt} · Foto: {article.sourceName ?? 'INDONEWS'}
         </p>
       </Container>
 
@@ -128,9 +118,24 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           <div className="min-w-0 lg:col-span-2">
             <ArticleBody content={article.content} />
 
+            {article.sourceUrl && (
+              <p className="mt-8 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+                Ringkasan ini dikutip dari{' '}
+                <a
+                  href={article.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-brand transition-colors hover:text-brand-dark"
+                >
+                  {article.sourceName ?? 'penerbit asli'}
+                </a>
+                . Baca laporan lengkapnya langsung di penerbit asli.
+              </p>
+            )}
+
             {/* Tags */}
             {article.tags.length > 0 && (
-              <div className="mt-10 rounded-xl border border-border bg-card p-5 shadow-card">
+              <div className="mt-10 rounded-xl border border-border bg-card p-5 shadow-card" data-print="hide">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
                     <Tag className="h-3.5 w-3.5" aria-hidden />
@@ -152,7 +157,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1" data-print="hide">
             <div className="sticky top-24">
               <Sidebar />
             </div>
@@ -161,7 +166,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       </Container>
 
       {/* ── Related news ── */}
-      <RelatedNews articles={related} />
+      <div data-print="hide">
+        <RelatedNews articles={related} />
+      </div>
     </>
   );
 }

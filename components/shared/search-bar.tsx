@@ -91,7 +91,16 @@ export function SearchBar({
   return (
     <div
       ref={rootRef}
-      className={cn('relative flex items-center', compact ? 'w-10' : 'w-full', className)}
+      className={cn(
+        'relative flex items-center',
+        compact ? 'w-10' : 'w-full',
+        // Hanya kotak pencarian di header desktop (xl ke atas): saat fokus,
+        // input melebar ke kiri agar lebih mudah dibaca di layar laptop.
+        // Panel pencarian mobile berlebar penuh, jadi sengaja tidak ikut.
+        !compact &&
+          'xl:transition-all xl:duration-200 xl:focus-within:z-50 xl:focus-within:w-[calc(100%_+_3rem)] xl:focus-within:-ml-12',
+        className,
+      )}
     >
       <Search
         className={cn(
@@ -148,7 +157,7 @@ export function SearchBar({
           onKeyDown?.(event);
         }}
         className={cn(
-          'w-full rounded-full border border-border bg-muted/50 py-1.5 pl-9 pr-10 text-xs text-foreground placeholder:text-muted-foreground transition-all focus:border-brand focus:bg-background focus:outline-none focus:ring-2 focus:ring-brand/20',
+          'w-full rounded-full border border-border bg-muted/50 py-1.5 pl-9 pr-10 text-xs text-foreground placeholder:text-muted-foreground transition-all focus:border-brand focus:bg-background focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand/20',
           compact && 'cursor-pointer border-transparent bg-transparent',
         )}
       />

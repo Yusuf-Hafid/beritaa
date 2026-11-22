@@ -535,3 +535,100 @@
     text-align: center;
   }
 }
+
+/* ── Cetak / simpan PDF (tombol "Download PDF" di halaman artikel) ──
+   Aturan di bawah hanya aktif saat print, tampilan layar tidak berubah. */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  /* Navigasi & elemen interaktif tidak ikut tercetak. */
+  .skip-link,
+  header.sticky,
+  footer[role='contentinfo'],
+  nav[aria-label='Breadcrumb'],
+  aside[aria-label='Sidebar'],
+  section[aria-label='Berita terkait'],
+  button,
+  [data-print='hide'] {
+    display: none !important;
+  }
+
+  main#main-content {
+    padding: 0 !important;
+  }
+
+  .animate-rise {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Judul, penulis, tanggal, dan isi berita tetap tampil. */
+  h1,
+  h2,
+  h3,
+  p,
+  figcaption,
+  blockquote {
+    color: #111 !important;
+  }
+
+  a {
+    color: #111 !important;
+    text-decoration: none !important;
+  }
+
+  .prose-indonews > p {
+    font-size: 11.5pt;
+    line-height: 1.65;
+    margin-bottom: 10pt;
+    orphans: 3;
+    widows: 3;
+  }
+
+  .prose-indonews > p:first-of-type {
+    font-size: 12.5pt;
+    color: #000 !important;
+  }
+
+  /* Drop cap berwarna tidak diperlukan di kertas. */
+  .prose-indonews > p:first-of-type::first-letter {
+    float: none;
+    font-size: inherit;
+    font-weight: 700;
+    line-height: inherit;
+    margin: 0;
+    color: #000 !important;
+  }
+
+  .prose-indonews > h2 {
+    font-size: 14pt;
+    margin: 14pt 0 6pt;
+    break-after: avoid;
+  }
+
+  .prose-indonews > blockquote,
+  .prose-indonews figure,
+  figure {
+    break-inside: avoid;
+  }
+
+  .prose-indonews > blockquote {
+    border-left-color: #333 !important;
+    background: #f4f4f4 !important;
+  }
+
+  img {
+    max-width: 100% !important;
+    box-shadow: none !important;
+  }
+}

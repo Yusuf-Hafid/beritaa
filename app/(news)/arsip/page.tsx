@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { CalendarDays, Newspaper } from 'lucide-react';
 import { Container } from '@/components/ui/container';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
-import { articles } from '@/data/articles';
+import { getAllArticles } from '@/lib/get-articles';
 import { getCategory } from '@/data/categories';
 import { formatTanggalSingkat } from '@/lib/format';
 
@@ -18,8 +18,8 @@ const monthFormatter = new Intl.DateTimeFormat('id-ID', {
   year: 'numeric',
 });
 
-export default function ArsipPage() {
-  const sorted = [...articles].sort(
+export default async function ArsipPage() {
+  const sorted = (await getAllArticles()).sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
   );
 

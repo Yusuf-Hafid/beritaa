@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Container } from '@/components/ui/container';
 import { mainNav } from '@/data/menu';
-import { getArticlesByCategory } from '@/data/articles';
 import { getCategory } from '@/data/categories';
+import type { Article } from '@/lib/types';
 
 export function Navbar() {
   return (
@@ -36,11 +36,12 @@ export function Navbar() {
 interface MegaMenuItemProps {
   slug: string;
   name: string;
+  articles: Article[];
 }
 
-export function MegaMenuItem({ slug, name }: MegaMenuItemProps) {
+export function MegaMenuItem({ slug, name, articles }: MegaMenuItemProps) {
   const category = getCategory(slug);
-  const categoryArticles = getArticlesByCategory(slug).slice(0, 4);
+  const categoryArticles = articles.slice(0, 4);
   const accent = category?.color ?? 'hsl(var(--brand))';
 
   return (

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Flame, BookmarkPlus, TrendingUp } from 'lucide-react';
 import { NewsletterForm } from '@/components/shared/newsletter-form';
-import { getPopularArticles, getArticlesByCategory } from '@/data/articles';
+import { getAllArticles, getPopularArticles } from '@/lib/get-articles';
 import { categories } from '@/data/categories';
 import { formatWaktuRelatif } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -11,11 +11,17 @@ interface SidebarProps {
   className?: string;
 }
 
-export function Sidebar({ className }: SidebarProps) {
-  const popular = getPopularArticles(5);
-  const rekomendasi = categories
-    .flatMap((c) => getArticlesByCategory(c.slug))
-    .filter((a) => !a.isBreaking)
+export async function Sidebar({ className }: SidebarProps) {
+  const [popular, allArticles] = await Promise.all([
+    getPopularArticles(5),
+    getAllArticles(),
+  ]);
+  const popularSlugs = new Set(popular.map((article) => article.slug));
+  const rekomendasi = allArticles
+    .filter(
+      (article) =>
+        !article.isBreaking && !popularSlugs.has(article.slug),
+    )
     .slice(0, 3);
 
   return (

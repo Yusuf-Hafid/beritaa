@@ -6,12 +6,27 @@ import {
 } from '@/components/news/economy-slider';
 import { CategorySection } from '@/components/news/category-section';
 import { Sidebar } from '@/components/news/sidebar';
+import { MarketDashboard } from '@/components/market-dashboard';
 import { Reveal } from '@/components/shared/reveal';
 import { getHomepageArticles } from '@/lib/get-articles';
 import type { CategorySlug } from '@/lib/types';
 
 export default async function HomePage() {
   const allArticles = await getHomepageArticles();
+
+  if (allArticles.length === 0) {
+    return (
+      <Container className="py-16">
+        <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Belum ada berita yang bisa ditampilkan saat ini. Silakan muat ulang
+            beberapa saat lagi.
+          </p>
+        </div>
+      </Container>
+    );
+  }
+
   const featured = allArticles.filter((article) => article.isFeatured);
 
   const lead = featured[0] ?? allArticles[0];
@@ -77,6 +92,15 @@ export default async function HomePage() {
         <Container>
           <Reveal>
             <EconomySlider slides={economySlides} />
+          </Reveal>
+        </Container>
+      </div>
+
+      {/* ── Market dashboard ── */}
+      <div className="border-b border-border/40 py-12">
+        <Container>
+          <Reveal>
+            <MarketDashboard />
           </Reveal>
         </Container>
       </div>

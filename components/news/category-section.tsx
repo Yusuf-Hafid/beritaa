@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Hash } from 'lucide-react';
 import { ArticleCard } from '@/components/news/article-card';
 import { getCategory, categories } from '@/data/categories';
-import { getArticlesByCategory } from '@/data/articles';
+import { getArticlesByCategory } from '@/lib/get-articles';
 import { cn } from '@/lib/utils';
 import type { CategorySlug } from '@/lib/types';
 
@@ -12,7 +12,7 @@ interface CategorySectionProps {
   className?: string;
 }
 
-export function CategorySection({
+export async function CategorySection({
   categorySlug,
   index = 0,
   className,
@@ -20,7 +20,7 @@ export function CategorySection({
   const category = getCategory(categorySlug);
   if (!category) return null;
 
-  const sectionArticles = getArticlesByCategory(categorySlug);
+  const sectionArticles = await getArticlesByCategory(categorySlug);
   if (sectionArticles.length === 0) return null;
 
   const [lead, ...rest] = sectionArticles;

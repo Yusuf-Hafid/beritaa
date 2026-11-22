@@ -37,6 +37,10 @@ export interface Article {
   tags: string[];
   isBreaking: boolean;
   isFeatured: boolean;
+  /** URL artikel asli di penerbit (khusus berita dari GNews). */
+  sourceUrl?: string;
+  /** Nama penerbit asal berita. */
+  sourceName?: string;
 }
 
 export interface ArticleContent {

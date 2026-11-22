@@ -8,10 +8,16 @@ import { SearchBar } from '@/components/shared/search-bar';
 import { mainNav } from '@/data/menu';
 import { MegaMenuItem } from '@/components/layout/navbar';
 import { cn } from '@/lib/utils';
-import type { SearchIndexItem } from '@/lib/types';
+import type { Article, SearchIndexItem } from '@/lib/types';
 import { Menu, X, Search } from 'lucide-react';
 
-export function Header({ searchIndex = [] }: { searchIndex?: SearchIndexItem[] }) {
+export function Header({
+  searchIndex = [],
+  megaArticles = {},
+}: {
+  searchIndex?: SearchIndexItem[];
+  megaArticles?: Record<string, Article[]>;
+}) {
   const [activeMega, setActiveMega] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -114,6 +120,9 @@ export function Header({ searchIndex = [] }: { searchIndex?: SearchIndexItem[] }
                         <MegaMenuItem
                           slug={item.href.replace('/', '')}
                           name={item.megaMenu.title}
+                          articles={
+                            megaArticles[item.href.replace('/', '')] ?? []
+                          }
                         />
                       )}
                     </div>

@@ -1,10 +1,30 @@
-import { articles as fallbackArticles } from '@/data/articles';
 import { categories } from '@/data/categories';
-import type { Article, ArticleContent, CategorySlug } from '@/lib/types';
+import type {
+  Article,
+  ArticleContent,
+  CategorySlug,
+  SearchIndexItem,
+} from '@/lib/types';
+import {
+  getAllNewsArticles,
+  getCategoryFeed,
+  getNewsArticleBySlug,
+  isNewsArticleSlug,
+} from '@/lib/gnews';
 import {
   createAdminClient,
   isSupabaseAdminConfigured,
 } from '@/utils/supabase/server';
+
+/**
+ * Sumber data portal.
+ *
+ * 1. Supabase — artikel yang ditulis redaksi lewat dashboard admin.
+ * 2. GNews API — pasokan berita terkini dari seluruh kategori.
+ *
+ * Tidak ada lagi artikel statis/dummy: kalau kedua sumber kosong, halaman
+ * menampilkan empty state, bukan berita contoh.
+ */
 
 const ARTICLE_COLUMNS = [
   'id',
@@ -149,146 +169,200 @@ function mapArticleRow(row: ArticleRow): Article | null {
   };
 }
 
-/**
- * Gabungkan hasil Supabase dengan seed lokal.
- *
- * Data real selalu di urutan paling atas, lalu dummy hanya ditambahkan jika
- * slug-nya belum ada. Ini menjaga halaman tetap terisi saat tabel masih kosong
- * tanpa menampilkan berita ganda.
- */
-function mergeArticles(primary: Article[], fallback: Article[]): Article[] {
+/** Artikel tulisan redaksi dari Supabase (kosong bila belum dikonfigurasi). */
+async function getEditorialArticles(
+  category?: CategorySlug,
+): Promise<Article[]> {
+  if (!isSupabaseAdminConfigured()) return [];
+
+  try {
+    const supabase = createAdminClient();
+    const base = supabase
+      .from('articles')
+      .select(ARTICLE_COLUMNS)
+      .order('published_at', { ascending: false });
+
+    const { data, error } = category
+      ? await base.eq('category', category)
+      : await base;
+
+    if (error) {
+      console.warn('[articles] Supabase fetch failed:', error.message);
+      return [];
+    }
+
+    return ((data ?? []) as unknown as ArticleRow[])
+      .map((row) => mapArticleRow(row))
+      .filter((article): article is Article => article !== null);
+  } catch (error) {
+    console.warn(
+      '[articles] Supabase is unavailable:',
+      error instanceof Error ? error.message : 'unknown error',
+    );
+    return [];
+  }
+}
+
+function mergeArticles(primary: Article[], secondary: Article[]): Article[] {
   const seen = new Set(primary.map((article) => article.slug));
+
   return [
     ...primary,
-    ...fallback.filter((article) => !seen.has(article.slug)),
+    ...secondary.filter((article) => !seen.has(article.slug)),
   ];
 }
 
+function sortByDate(articles: Article[]): Article[] {
+  return [...articles].sort(
+    (a, b) =>
+      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+  );
+}
+
 /**
- * Homepage data source.
- *
- * Supabase is always tried first, ordered by the newest publication, and the
- * local seed articles are appended after it so the homepage never renders
- * empty. Slugs already returned by Supabase are skipped to avoid duplicates.
+ * Beranda: tulisan redaksi didahulukan, sisanya berita GNews terbaru.
+ * Tiga artikel teratas ditandai featured untuk hero & slider.
  */
 export async function getHomepageArticles(): Promise<Article[]> {
-  if (!isSupabaseAdminConfigured()) {
-    return [...fallbackArticles];
-  }
+  const [editorial, news] = await Promise.all([
+    getEditorialArticles(),
+    getAllNewsArticles(),
+  ]);
 
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('articles')
-      .select(ARTICLE_COLUMNS)
-      .order('published_at', { ascending: false });
+  const merged = sortByDate(mergeArticles(editorial, news));
 
-    if (error) {
-      console.warn('[homepage] Supabase fetch failed:', error.message);
-      return [...fallbackArticles];
-    }
-
-    const mapped = ((data ?? []) as unknown as ArticleRow[])
-      .map((row) => mapArticleRow(row))
-      .filter((article): article is Article => article !== null);
-
-    return mergeArticles(mapped, fallbackArticles);
-  } catch (error) {
-    console.warn(
-      '[homepage] Supabase is unavailable:',
-      error instanceof Error ? error.message : 'unknown error',
-    );
-    return [...fallbackArticles];
-  }
+  return merged.map((article, index) => ({
+    ...article,
+    isFeatured: article.isFeatured || index < 3,
+  }));
 }
 
-/**
- * Category data source.
- *
- * Filters Supabase by the category slug and keeps the newest story first, then
- * appends the matching seed articles that Supabase did not return. A failed or
- * empty query therefore still leaves the category page populated.
- */
+/** Semua artikel satu kategori: redaksi + GNews, urut terbaru. */
 export async function getArticlesByCategory(
-  category: string,
+  category: CategorySlug,
 ): Promise<Article[]> {
-  const fallback = fallbackArticles
-    .filter((article) => article.category === category)
-    .sort(
-      (a, b) =>
-        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-    );
+  const [editorial, news] = await Promise.all([
+    getEditorialArticles(category),
+    getCategoryFeed(category),
+  ]);
 
-  if (!isSupabaseAdminConfigured()) {
-    return fallback;
-  }
+  return sortByDate(mergeArticles(editorial, news));
+}
 
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('articles')
-      .select(ARTICLE_COLUMNS)
-      .eq('category', category)
-      .order('published_at', { ascending: false });
+/** Seluruh artikel untuk halaman arsip & indeks pencarian. */
+export async function getAllArticles(): Promise<Article[]> {
+  const [editorial, news] = await Promise.all([
+    getEditorialArticles(),
+    getAllNewsArticles(),
+  ]);
 
-    if (error) {
-      console.warn(
-        `[category:${category}] Supabase fetch failed:`,
-        error.message,
-      );
-      return fallback;
-    }
-
-    const mapped = ((data ?? []) as unknown as ArticleRow[])
-      .map((row) => mapArticleRow(row))
-      .filter((article): article is Article => article !== null);
-
-    return mergeArticles(mapped, fallback);
-  } catch (error) {
-    console.warn(
-      `[category:${category}] Supabase is unavailable:`,
-      error instanceof Error ? error.message : 'unknown error',
-    );
-    return fallback;
-  }
+  return sortByDate(mergeArticles(editorial, news));
 }
 
 /**
- * Detail data source.
+ * Detail artikel.
  *
- * Resolves one story by slug, preferring Supabase and falling back to the
- * matching seed article. `content` is normalized by `mapArticleRow`, so JSONB
- * blocks reach `ArticleBody` as typed `ArticleContent[]`.
+ * Slug berakhiran hash GNews diambil dari pool feed yang sudah ter-cache;
+ * slug lain dicari di Supabase lalu di pool berita yang sudah ter-cache.
  */
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
-  const fallback =
-    fallbackArticles.find((article) => article.slug === slug) ?? null;
-
-  if (!isSupabaseAdminConfigured()) {
-    return fallback;
+  if (isNewsArticleSlug(slug)) {
+    const article = await getNewsArticleBySlug(slug);
+    if (article) return article;
   }
 
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('articles')
-      .select(ARTICLE_COLUMNS)
-      .eq('slug', slug)
-      .maybeSingle();
+  if (isSupabaseAdminConfigured()) {
+    try {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase
+        .from('articles')
+        .select(ARTICLE_COLUMNS)
+        .eq('slug', slug)
+        .maybeSingle();
 
-    if (error) {
-      console.warn(`[article:${slug}] Supabase fetch failed:`, error.message);
-      return fallback;
+      if (error) {
+        console.warn(`[article:${slug}] Supabase fetch failed:`, error.message);
+      } else if (data) {
+        const mapped = mapArticleRow(data as unknown as ArticleRow);
+        if (mapped) return mapped;
+      }
+    } catch (error) {
+      console.warn(
+        `[article:${slug}] Supabase is unavailable:`,
+        error instanceof Error ? error.message : 'unknown error',
+      );
     }
-
-    if (!data) return fallback;
-
-    return mapArticleRow(data as unknown as ArticleRow) ?? fallback;
-  } catch (error) {
-    console.warn(
-      `[article:${slug}] Supabase is unavailable:`,
-      error instanceof Error ? error.message : 'unknown error',
-    );
-    return fallback;
   }
+
+  const pool = await getAllNewsArticles();
+  return pool.find((article) => article.slug === slug) ?? null;
+}
+
+/** Berita terkait dari kategori yang sama, dilengkapi kategori lain. */
+export async function getRelatedArticles(
+  article: Article,
+  limit = 4,
+): Promise<Article[]> {
+  const [sameCategory, latest] = await Promise.all([
+    getArticlesByCategory(article.category),
+    getAllNewsArticles(),
+  ]);
+
+  const related = sameCategory.filter((item) => item.slug !== article.slug);
+  const seen = new Set(related.map((item) => item.slug));
+
+  for (const item of latest) {
+    if (related.length >= limit) break;
+    if (item.slug === article.slug || seen.has(item.slug)) continue;
+    seen.add(item.slug);
+    related.push(item);
+  }
+
+  return related.slice(0, limit);
+}
+
+/** Breaking ticker: berita < 3 jam, atau 6 terbaru bila tidak ada. */
+export async function getBreakingArticles(): Promise<Article[]> {
+  const all = await getAllArticles();
+  const breaking = all.filter((article) => article.isBreaking);
+
+  return (breaking.length > 0 ? breaking : all).slice(0, 6);
+}
+
+/**
+ * Sidebar "Terpopuler".
+ *
+ * GNews tidak menyediakan metrik pembaca, jadi daftar diurutkan
+ * dari berita terbaru lintas kategori.
+ */
+export async function getPopularArticles(limit = 5): Promise<Article[]> {
+  const all = await getAllArticles();
+  return all.slice(0, limit);
+}
+
+/** Indeks pencarian header, dibangun dari artikel nyata. */
+export async function getSearchIndex(): Promise<SearchIndexItem[]> {
+  const all = await getAllArticles();
+
+  return all.slice(0, 80).map((article) => ({
+    slug: article.slug,
+    title: article.title,
+    category: article.category,
+    publishedAt: article.publishedAt,
+    thumbnailUrl: article.thumbnailUrl,
+  }));
+}
+
+/** Empat berita terbaru per kategori untuk mega menu header. */
+export async function getMegaMenuArticles(): Promise<
+  Record<string, Article[]>
+> {
+  const entries = await Promise.all(
+    categories.map(async (category) => {
+      const articles = await getArticlesByCategory(category.slug);
+      return [category.slug, articles.slice(0, 4)] as const;
+    }),
+  );
+
+  return Object.fromEntries(entries);
 }

@@ -47,7 +47,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const category = getCategory(categorySlug);
   if (!category) notFound();
 
-  const categoryArticles = await getArticlesByCategory(categorySlug);
+  const categoryArticles = await getArticlesByCategory(category.slug);
   const subTopiks = subTopikMap[categorySlug] ?? [];
 
   return (
@@ -135,7 +135,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                   ))}
                 </div>
                 <div className="mt-10">
-                  <Pagination currentPage={1} totalPages={4} />
+                  <Pagination
+                    currentPage={1}
+                    totalPages={Math.max(
+                      1,
+                      Math.ceil(categoryArticles.length / 10),
+                    )}
+                  />
                 </div>
               </>
             )}
