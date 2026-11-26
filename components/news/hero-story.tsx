@@ -68,9 +68,6 @@ export function HeroStory({
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <CategoryBadge slug={article.category} asLink={false} />
-                        <span className="text-[0.6rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                          {formatWaktuRelatif(article.publishedAt)}
-                        </span>
                       </div>
                       <h3 className="mt-1.5 line-clamp-3 font-serif text-base font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
                         {article.title}

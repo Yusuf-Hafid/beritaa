@@ -36,7 +36,8 @@ export function Footer() {
           <div className="col-span-2 lg:col-span-2">
             <Link
               href="/"
-              className="group inline-flex items-center"
+              draggable={false}
+              className="group inline-flex cursor-pointer select-none items-center"
               aria-label="INDONEWS — Beranda"
             >
               {/* Logo artwork has ~20% black padding on every side; crop it so the mark stays legible */}
@@ -44,6 +45,7 @@ export function Footer() {
                 <img
                   src="/Berita-Indonews.svg"
                   alt="Indonews Logo"
+                  draggable={false}
                   className="h-full w-full object-cover"
                 />
               </span>

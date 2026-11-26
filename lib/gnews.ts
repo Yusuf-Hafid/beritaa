@@ -5,12 +5,17 @@ import type { Article, ArticleContent, CategorySlug } from '@/lib/types';
  *
  * Sumber utama adalah RSS dari portal berita Indonesia (Antara, Tempo, CNN
  * Indonesia). RSS dibaca langsung di server, digabung per kategori, lalu
- * dinormalisasi dengan pipeline yang sama. GNews → Currents → MediaStack
- * hanya dipakai sebagai cadangan bila RSS kosong atau seluruh feed gagal,
- * dan hanya provider yang API key-nya tersedia. Semua API key dibaca di server.
+ * dinormalisasi dengan pipeline yang sama. Pencarian memakai NewsAPI.org
+ * (`NEWSINDO_API_KEY`) lebih dulu; GNews → NewsAPI → Currents → MediaStack
+ * dipakai sebagai cadangan bila RSS kosong atau seluruh feed gagal.
+ *
+ * Halaman detail artikel Antara, CNN Indonesia, dan Detik diperkaya dari
+ * halaman sumber aslinya (dengan cache dan fallback ke ringkasan). Tidak ada
+ * artikel, penulis, atau tanggal yang dikarang. Semua API key dibaca di server.
  */
 
 const GNEWS_API = 'https://gnews.io/api/v4';
+const NEWSAPI_API = 'https://newsapi.org/v2';
 
 export const NEWS_REVALIDATE = 600;
 
@@ -290,35 +295,6 @@ function withScheme(value?: string | null): string | null {
   return /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
 }
 
-/**
- * Kata kunci judi online / slot / spam. Pencocokan dilakukan pada teks yang
- * sudah dinormalisasi (huruf kecil, diakritik dibuang, leetspeak dipetakan,
- * pemisah seperti spasi/titik/strip dibuang), sehingga trik seperti
- * `sl0t-gacor` atau `m a x w i n` tetap tertangkap.
- */
-const GAMBLING_KEYWORDS = [
-  'slot',
-  'slots',
-  'gacor',
-  'judol',
-  'judi',
-  'perjudian',
-  'maxwin',
-  'casino',
-  'kasino',
-  'togel',
-  'toto',
-  'sbobet',
-  'pragmatic',
-  'zeus',
-  'scatter',
-  'deposit',
-  'jackpot',
-  'poker',
-  'domino',
-  'rtp',
-];
-
 const LEET_MAP: Record<string, string> = {
   '0': 'o',
   '1': 'i',
@@ -328,40 +304,31 @@ const LEET_MAP: Record<string, string> = {
   '7': 't',
 };
 
-function buildGuardedPattern(keyword: string): RegExp {
+function guardedBody(keyword: string): string {
   // Setiap karakter dipisah pemisah pendek (` `, `-`, `.`, `*`, dst.) agar
   // trik `s l o t` / `max-win` tertangkap, tanpa melompati kata lain.
-  const body = keyword
+  return keyword
     .split('')
     .map((char) => char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('[^a-z0-9]{0,3}');
-
-  // Akhiran angka dibiarkan lolos (`slot88`), tetapi bukan huruf, supaya kata
-  // biasa seperti `deposito` tidak ikut tersaring.
-  return new RegExp(`(?<![a-z])${body}(?![a-z])`);
 }
 
-/**
- * Kata kunci yang cukup khas sehingga aman dicocokkan meski menempel dengan
- * kata lain, mis. domain `slotgacor88.com`.
- */
-const PACKED_KEYWORDS = [
-  'slot',
-  'gacor',
-  'judol',
-  'maxwin',
-  'casino',
-  'kasino',
-  'togel',
-  'sbobet',
-  'pragmatic',
-  'scatter',
-  'jackpot',
-  'poker',
-  'domino',
-];
+function buildGuardedPattern(keyword: string): RegExp {
+  // Akhiran angka dibiarkan lolos (`slot88`), tetapi bukan huruf, supaya kata
+  // biasa seperti `deposito` tidak ikut tersaring.
+  return new RegExp(`(?<![a-z])${guardedBody(keyword)}(?![a-z])`);
+}
 
-const GUARDED_PATTERNS = GAMBLING_KEYWORDS.map(buildGuardedPattern);
+/** Frasa multi-kata; spasi boleh hilang (`slotgacor`) atau jadi pemisah. */
+function buildPhrasePattern(phrase: string): RegExp {
+  const body = phrase
+    .trim()
+    .split(/\s+/)
+    .map((word) => guardedBody(word))
+    .join('[^a-z0-9]{0,3}');
+
+  return new RegExp(`(?<![a-z])${body}(?![a-z])`);
+}
 
 function normalizeForMatch(value: string): string {
   return value
@@ -387,21 +354,176 @@ function decodeUrl(value: string): string {
   }
 }
 
+/**
+ * Frasa yang sudah sangat khas judi online. Frasa ini selalu ditolak.
+ * Kata ambigu seperti `slot`, `deposit`, `poker`, dan `domino` tidak langsung
+ * ditolak agar artikel sah seperti "slot waktu", "deposit bank", atau
+ * "Toto Wolff" tetap lolos.
+ */
+const STRONG_GAMBLING_PHRASES = [
+  'gacor',
+  'judol',
+  'maxwin',
+  'togel',
+  'sbobet',
+  'judi',
+  'perjudian',
+  'slot online',
+  'situs slot',
+  'link slot',
+  'daftar slot',
+  'bandar slot',
+  'slot gacor',
+  'slot 88',
+  'slot 77',
+  'slot 99',
+  'slot demo',
+  'slot mahjong',
+  'mahjong ways',
+  'mahjong wins',
+  'mahjong slot',
+  'mahjong gacor',
+  'gates of olympus',
+  'sweet bonanza',
+  'starlight princess',
+  'judi online',
+  'bandar judi',
+  'situs judi',
+  'link judi',
+  'toto online',
+  'bandar toto',
+  'toto 4d',
+  'poker online',
+  'domino online',
+  'casino online',
+  'kasino online',
+  'pragmatic play',
+  'scatter hitam',
+  'scatter slot',
+  'zeus slot',
+  'slot zeus',
+  'rtp slot',
+  'slot rtp',
+  'jackpot slot',
+  'slot jackpot',
+  'bonus slot',
+  'slot bonus',
+  'bonus deposit',
+  'deposit bonus',
+  'minimal deposit',
+  'deposit pulsa',
+  'deposit qris',
+  'deposit ovo',
+  'deposit gopay',
+  'deposit 10rb',
+  'deposit 20rb',
+  'deposit 50rb',
+  'slot deposit',
+  'deposit slot',
+  'slot pulsa',
+  'slot dana',
+  'slot qris',
+  'anti rungkad',
+];
+
+const STRONG_GAMBLING_PATTERNS = STRONG_GAMBLING_PHRASES.map(buildPhrasePattern);
+
+/**
+ * Frasa sah yang mengandung kata ambigu. Dibuang sebelum pengecekan agar
+ * "slot waktu", "deposit bank", "poker face", dan "efek domino" tidak
+ * dianggap judi.
+ */
+const SAFE_SLOT_PATTERN =
+  /(?<![a-z])slot[^a-z0-9]{1,3}(?:waktu|parkir|penerbangan|terbang|anggaran|kebijakan|acara|siaran|produksi|jadwal|jam|ruang|lahan|pekerjaan|posisi|kuota|alokasi|investasi|pembangunan|proyek|tender|kontrak|memori|kartu|sim|usb|ekspansi|pci|server|hardware|perangkat|layanan|bisnis|pasar|regulasi|tarif|biaya|pajak|subsidi|bantuan|distribusi|logistik|energi|listrik|air|jaringan|internet|frekuensi|kanal|program|kelas|ujian|wawancara|terapi|operasi)(?![a-z])/g;
+
+const SAFE_DEPOSIT_PATTERN =
+  /(?<![a-z])deposit[^a-z0-9]{1,3}(?:bank|perbankan|fidusia|berjangka|giro|tabungan|nasabah|on[^a-z0-9]{1,3}call|insurance|guarantee|ratio|dana[^a-z0-9]{1,3}pihak[^a-z0-9]{1,3}ketiga|valuta|devisa|penjaminan|simpanan|sertifikat|lps)(?![a-z])/g;
+
+const SAFE_POKER_PATTERN =
+  /(?<![a-z])poker[^a-z0-9]{1,3}face(?![a-z])/g;
+
+const SAFE_DOMINO_PATTERN =
+  /(?<![a-z])(?:efek|teori)[^a-z0-9]{1,3}domino(?![a-z])|(?<![a-z])domino'?s(?![a-z])|(?<![a-z])domino[^a-z0-9]{1,3}(?:effect|pizza)(?![a-z])/g;
+
+const SLOT_PATTERN = buildGuardedPattern('slot');
+const SLOTS_PATTERN = buildGuardedPattern('slots');
+const DEPOSIT_PATTERN = buildGuardedPattern('deposit');
+const DEPOSITS_PATTERN = buildGuardedPattern('deposits');
+const POKER_PATTERN = buildGuardedPattern('poker');
+const DOMINO_PATTERN = buildGuardedPattern('domino');
+const DOMINOES_PATTERN = buildGuardedPattern('dominoes');
+
+/** Konteks yang membuat `deposit`/`poker`/`domino` jelas mengarah ke judi. */
+const GAMBLING_CONTEXT_PATTERNS = [
+  'slot',
+  'gacor',
+  'maxwin',
+  'judi',
+  'judol',
+  'togel',
+  'taruhan',
+  'bandar',
+  'depo',
+  'wd',
+  'withdraw',
+  'spin',
+  'putaran',
+  'pulsa',
+  'qris',
+  'dana',
+  'ovo',
+  'gopay',
+  'uang',
+  'mahjong',
+  'zeus',
+  'scatter',
+  'rtp',
+  'jackpot',
+  'casino',
+  'kasino',
+].map(buildGuardedPattern);
+
+function stripSafePhrases(value: string): string {
+  return value
+    .replace(SAFE_SLOT_PATTERN, ' ')
+    .replace(SAFE_DEPOSIT_PATTERN, ' ')
+    .replace(SAFE_POKER_PATTERN, ' ')
+    .replace(SAFE_DOMINO_PATTERN, ' ');
+}
+
+function hasGamblingSignal(value?: string | null): boolean {
+  if (!value) return false;
+
+  const normalized = stripSafePhrases(normalizeForMatch(decodeUrl(value)));
+
+  if (STRONG_GAMBLING_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return true;
+  }
+
+  // Sisa `slot` setelah frasa sah dibuang tetap dianggap sinyal judi.
+  if (SLOT_PATTERN.test(normalized) || SLOTS_PATTERN.test(normalized)) {
+    return true;
+  }
+
+  const hasContext = GAMBLING_CONTEXT_PATTERNS.some((pattern) =>
+    pattern.test(normalized),
+  );
+  if (!hasContext) return false;
+
+  return (
+    DEPOSIT_PATTERN.test(normalized) ||
+    DEPOSITS_PATTERN.test(normalized) ||
+    POKER_PATTERN.test(normalized) ||
+    DOMINO_PATTERN.test(normalized) ||
+    DOMINOES_PATTERN.test(normalized)
+  );
+}
+
 /** Deteksi kata kunci judi/spam pada satu atau beberapa nilai teks. */
 function containsGamblingSignal(
   ...values: (string | null | undefined)[]
 ): boolean {
-  return values.some((value) => {
-    if (!value) return false;
-
-    const normalized = normalizeForMatch(decodeUrl(value));
-    const packed = normalized.replace(/[^a-z0-9]+/g, '');
-
-    return (
-      GUARDED_PATTERNS.some((pattern) => pattern.test(normalized)) ||
-      PACKED_KEYWORDS.some((keyword) => packed.includes(keyword))
-    );
-  });
+  return values.some((value) => hasGamblingSignal(value));
 }
 
 /**
@@ -480,6 +602,17 @@ function estimateReadTime(content: ArticleContent[], excerpt: string): number {
   return Math.max(1, Math.ceil(text.split(/\s+/).length / 200));
 }
 
+function cleanSourceName(value?: string | null): string {
+  const text = cleanText(value);
+  if (!text) return '';
+
+  try {
+    return new URL(text).hostname.replace(/^www\./i, '') || text;
+  } catch {
+    return text;
+  }
+}
+
 function mapArticle(
   raw: RawArticle,
   fallbackCategory: CategorySlug,
@@ -492,7 +625,11 @@ function mapArticle(
   };
   const title = cleanText(raw.title);
   const url = raw.url?.trim();
-  if (!title || !url) return null;
+  const publishedAt = raw.publishedAt;
+
+  // Tanggal wajib valid: artikel tanpa waktu terbit dilewati, bukan diberi
+  // waktu sekarang sebagai tanggal palsu.
+  if (!title || !url || !publishedAt) return null;
 
   // Buang artikel yang judul, ringkasan, isi, URL, atau gambar sumbernya
   // mengandung indikasi judi online / slot / spam sebelum masuk aplikasi.
@@ -508,11 +645,16 @@ function mapArticle(
     return null;
   }
 
-  const excerpt = cleanText(raw.description);
+  const excerpt =
+    cleanText(raw.description) || cleanText(raw.content).slice(0, 240);
   const content = buildContent(excerpt, raw.content ?? '');
-  const sourceName = cleanText(raw.sourceName) || defaultSource;
+
+  // Tanpa ringkasan maupun isi, halaman detail akan kosong. Lebih baik
+  // dilewati daripada menampilkan artikel tanpa badan berita.
+  if (!excerpt && content.length === 0) return null;
+
+  const sourceName = cleanSourceName(raw.sourceName) || defaultSource;
   const authorName = cleanText(raw.authorName) || sourceName;
-  const publishedAt = raw.publishedAt ?? new Date().toISOString();
   const slug = `${slugify(title) || 'berita'}-${urlHash(url)}`;
 
   const ageHours =
@@ -1051,6 +1193,20 @@ interface ProviderAttempt {
   needsFallback: boolean;
 }
 
+/**
+ * GNews membatasi satu request per detik. Fallback kategori dijalankan
+ * paralel, jadi request diserialkan agar tidak langsung kena 429.
+ */
+let gnewsLastRequestAt = 0;
+
+async function throttleGNews(): Promise<void> {
+  const wait = 1100 - (Date.now() - gnewsLastRequestAt);
+  if (wait > 0) {
+    await new Promise((resolve) => setTimeout(resolve, wait));
+  }
+  gnewsLastRequestAt = Date.now();
+}
+
 async function requestGNews(
   target: FeedTarget,
   request: FeedRequest,
@@ -1081,9 +1237,12 @@ async function requestGNews(
   }
 
   try {
+    await throttleGNews();
+
     const response = await fetch(url.toString(), {
       next: { revalidate: NEWS_REVALIDATE },
       headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {
@@ -1091,7 +1250,7 @@ async function requestGNews(
         response.status === 401 || response.status === 403
           ? 'API key GNews tidak valid'
           : response.status === 429
-            ? 'kuota GNews habis (100 request/hari)'
+            ? 'kuota/rate limit GNews tercapai'
             : `HTTP ${response.status}`;
       console.warn(`[gnews] ${reason} untuk ${target.endpoint}`);
       return { articles: [], needsFallback: true };
@@ -1157,6 +1316,164 @@ function isProviderBlocked(provider: string): boolean {
 
 function blockProvider(provider: string, cooldown: number): void {
   providerBlockedUntil.set(provider, Date.now() + cooldown);
+}
+
+/* ------------------------------------------------------------------------- *
+ * NewsAPI.org (`NEWSINDO_API_KEY`)
+ *
+ * Plan yang tersedia tidak punya top-headlines Indonesia (country/language
+ * `id` selalu kosong), tetapi `everything?language=id` berfungsi. Karena itu
+ * NewsAPI dipakai untuk pencarian dan cadangan kategori, bukan feed kategori
+ * utama. `content` dari plan ini tetap terpotong; halaman detail Antara/CNN/
+ * Detik diperkaya terpisah dari halaman sumber aslinya.
+ * ------------------------------------------------------------------------- */
+
+const NEWSAPI_CATEGORY_QUERY: Record<CategorySlug, string> = {
+  nasional: 'Indonesia',
+  internasional: 'internasional OR dunia OR global',
+  ekonomi: 'ekonomi OR bisnis OR investasi OR "pasar modal"',
+  olahraga: 'olahraga OR "sepak bola" OR motogp OR bulu tangkis',
+  teknologi: 'teknologi OR gadget OR "kecerdasan buatan" OR startup',
+  hiburan: 'hiburan OR selebriti OR film OR musik',
+  'gaya-hidup': '"gaya hidup" OR kesehatan OR kuliner OR wisata',
+  hukum: 'hukum OR pengadilan OR kejaksaan OR "mahkamah agung"',
+};
+
+interface NewsApiRawArticle {
+  title?: string | null;
+  description?: string | null;
+  content?: string | null;
+  url?: string | null;
+  urlToImage?: string | null;
+  publishedAt?: string | null;
+  author?: string | null;
+  source?: { id?: string | null; name?: string | null } | null;
+}
+
+function fromNewsApi(raw: NewsApiRawArticle): RawArticle {
+  return {
+    title: raw.title,
+    description: raw.description,
+    content: raw.content,
+    url: raw.url,
+    image: raw.urlToImage,
+    publishedAt: raw.publishedAt,
+    sourceName: raw.source?.name,
+    authorName: raw.author,
+  };
+}
+
+function newsApiKey(): string | null {
+  // Nama resmi di brief adalah NEWSINDO_API_KEY. Sebagian environment lokal
+  // memakai alias NEWSDATA_API_KEY untuk key NewsAPI.org yang sama.
+  const key =
+    process.env.NEWSINDO_API_KEY?.trim() ||
+    process.env.NEWSDATA_API_KEY?.trim();
+
+  return key || null;
+}
+
+async function requestNewsApi(
+  request: FeedRequest,
+  category: CategorySlug,
+): Promise<ProviderAttempt> {
+  const key = newsApiKey();
+
+  if (!key) {
+    console.warn(
+      '[newsapi] NEWSINDO_API_KEY/NEWSDATA_API_KEY tidak tersedia di environment',
+    );
+    return { articles: [], needsFallback: true };
+  }
+
+  if (isProviderBlocked('newsapi')) {
+    return { articles: [], needsFallback: true };
+  }
+
+  const url = new URL(`${NEWSAPI_API}/everything`);
+  url.searchParams.set('apiKey', key);
+  url.searchParams.set('language', 'id');
+  url.searchParams.set('pageSize', String(MAX_ARTICLES));
+  url.searchParams.set(
+    'sortBy',
+    request.sortby === 'relevance' ? 'relevancy' : 'publishedAt',
+  );
+
+  if (request.q) {
+    url.searchParams.set('q', request.q);
+  } else {
+    url.searchParams.set('q', NEWSAPI_CATEGORY_QUERY[category]);
+    url.searchParams.set('searchIn', 'title,description');
+
+    // Batasi cadangan kategori ke sepekan terakhir agar tidak menyajikan
+    // berita lama sebagai feed terkini.
+    const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    url.searchParams.set('from', from);
+  }
+
+  try {
+    const response = await fetch(url.toString(), {
+      next: { revalidate: NEWS_REVALIDATE },
+      headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!response.ok) {
+      const reason =
+        response.status === 401 || response.status === 403
+          ? 'API key NewsAPI tidak valid'
+          : response.status === 429
+            ? 'kuota NewsAPI habis'
+            : response.status === 426
+              ? 'plan NewsAPI tidak mendukung endpoint ini'
+              : `HTTP ${response.status}`;
+      console.warn(`[newsapi] ${reason}`);
+
+      const permanent =
+        response.status === 401 ||
+        response.status === 403 ||
+        response.status === 426;
+      blockProvider(
+        'newsapi',
+        permanent || response.status === 429
+          ? PROVIDER_COOLDOWN
+          : PROVIDER_RETRY,
+      );
+      return { articles: [], needsFallback: true };
+    }
+
+    const payload = (await response.json()) as {
+      status?: string;
+      articles?: NewsApiRawArticle[];
+      code?: string;
+      message?: string;
+    };
+
+    if (!Array.isArray(payload.articles)) {
+      console.warn(
+        `[newsapi] ${payload.message ?? 'respons NewsAPI tidak dikenali'}`,
+      );
+      blockProvider('newsapi', PROVIDER_RETRY);
+      return { articles: [], needsFallback: true };
+    }
+
+    const articles = mapArticles(
+      payload.articles.map(fromNewsApi),
+      category,
+      'newsapi',
+    );
+
+    return { articles, needsFallback: articles.length === 0 };
+  } catch (error) {
+    console.warn(
+      '[newsapi] gagal mengambil berita:',
+      error instanceof Error ? error.message : 'unknown error',
+    );
+    blockProvider('newsapi', PROVIDER_RETRY);
+    return { articles: [], needsFallback: true };
+  }
 }
 
 /** Kategori portal → kategori Currents (tersedia: world, politics, lifestyle, ...). */
@@ -1405,6 +1722,36 @@ async function requestFeed(
     return value;
   };
 
+  // Pencarian: NewsAPI.org didahulukan, lalu RSS, lalu GNews.
+  if (request.q) {
+    const newsApi = await requestNewsApi(request, category);
+    if (!newsApi.needsFallback) {
+      return remember(
+        { articles: newsApi.articles, nextPage: null },
+        MEMO_TTL,
+      );
+    }
+
+    const rssArticles = await requestRss(request);
+    if (rssArticles.length > 0) {
+      return remember({ articles: rssArticles, nextPage: null }, MEMO_TTL);
+    }
+
+    const gnews = await requestGNews(target, request, category);
+    if (!gnews.needsFallback) {
+      return remember({ articles: gnews.articles, nextPage: null }, MEMO_TTL);
+    }
+
+    const articles = await requestFallback(request, category);
+    if (articles.length > 0) {
+      return remember({ articles, nextPage: null }, MEMO_TTL);
+    }
+
+    return remember(empty, FAILURE_TTL);
+  }
+
+  // Kategori: RSS tetap utama. GNews dipakai lebih dulu karena punya
+  // pemetaan kategori asli; NewsAPI menjadi cadangan berikutnya.
   const rssArticles = await requestRss(request);
   if (rssArticles.length > 0) {
     return remember({ articles: rssArticles, nextPage: null }, MEMO_TTL);
@@ -1414,9 +1761,14 @@ async function requestFeed(
     `[rss] tidak ada artikel untuk ${cacheKey}; fallback ke API ber-key`,
   );
 
-  const primary = await requestGNews(target, request, category);
-  if (!primary.needsFallback) {
-    return remember({ articles: primary.articles, nextPage: null }, MEMO_TTL);
+  const gnews = await requestGNews(target, request, category);
+  if (!gnews.needsFallback) {
+    return remember({ articles: gnews.articles, nextPage: null }, MEMO_TTL);
+  }
+
+  const newsApi = await requestNewsApi(request, category);
+  if (!newsApi.needsFallback) {
+    return remember({ articles: newsApi.articles, nextPage: null }, MEMO_TTL);
   }
 
   const articles = await requestFallback(request, category);
@@ -1492,12 +1844,393 @@ function titleFromSlug(slug: string): string {
     .join(' ');
 }
 
+/* ------------------------------------------------------------------------- *
+ * Isi penuh halaman detail
+ *
+ * Hanya Antara, CNN Indonesia, dan Detik yang diizinkan. Halaman sumber
+ * diambil sekali per URL (cache 6 jam), lalu paragrafnya diekstrak. Bila
+ * gagal, artikel tetap memakai ringkasan asli — tidak ada isi yang dikarang.
+ * Tempo sengaja tidak diambil karena halaman artikelnya menolak akses (403).
+ * ------------------------------------------------------------------------- */
+
+const FULLTEXT_CACHE_TTL = 6 * 60 * 60_000;
+const FULLTEXT_FAILURE_TTL = 15 * 60_000;
+const FULLTEXT_MAX_PARAGRAPHS = 30;
+const FULLTEXT_MAX_CHARS = 18_000;
+const FULLTEXT_MIN_CHARS = 300;
+
+type FullTextSource = 'antara' | 'cnn' | 'detik';
+
+const PAGE_HEADERS = {
+  accept: 'text/html,application/xhtml+xml',
+  'user-agent': RSS_HEADERS['user-agent'],
+};
+
+interface FullTextData {
+  content: ArticleContent[];
+  authorName?: string;
+}
+
+function fullTextSource(url: string): FullTextSource | null {
+  try {
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+
+    if (host === 'antaranews.com' || host.endsWith('.antaranews.com')) {
+      return 'antara';
+    }
+    if (host === 'cnnindonesia.com' || host.endsWith('.cnnindonesia.com')) {
+      return 'cnn';
+    }
+    if (host === 'detik.com' || host.endsWith('.detik.com')) {
+      return 'detik';
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+/** Ambil isi `<div>` yang cocok, termasuk seluruh div bersarang di dalamnya. */
+function findDivHtml(
+  html: string,
+  matches: (openingTag: string) => boolean,
+): string | null {
+  const openingPattern = /<div\b[^>]*>/gi;
+
+  for (const match of html.matchAll(openingPattern)) {
+    const openingTag = match[0];
+    if (!matches(openingTag)) continue;
+
+    const start = (match.index ?? 0) + openingTag.length;
+    const depthPattern = /<\/?div\b[^>]*>/gi;
+    depthPattern.lastIndex = start;
+
+    let depth = 1;
+    let nested: RegExpExecArray | null;
+
+    while ((nested = depthPattern.exec(html)) !== null) {
+      if (/^<\/div/i.test(nested[0])) {
+        depth -= 1;
+        if (depth === 0) return html.slice(start, nested.index);
+      } else {
+        depth += 1;
+      }
+    }
+  }
+
+  return null;
+}
+
+function extractBodyHtml(
+  html: string,
+  source: FullTextSource,
+): string | null {
+  if (source === 'antara') {
+    return findDivHtml(html, (tag) =>
+      /class=["'][^"']*wrap__article-detail-content[^"']*["']/i.test(tag),
+    );
+  }
+
+  if (source === 'cnn') {
+    return (
+      findDivHtml(html, (tag) =>
+        /\bid=["']article-content-body["']/i.test(tag),
+      ) ??
+      findDivHtml(html, (tag) =>
+        /class=["'][^"']*detail__body-text[^"']*["']/i.test(tag),
+      )
+    );
+  }
+
+  return (
+    findDivHtml(html, (tag) =>
+      /class=["'][^"']*detail__body-text[^"']*["']/i.test(tag),
+    ) ??
+    findDivHtml(html, (tag) =>
+      /class=["'][^"']*itp_bodycontent[^"']*["']/i.test(tag),
+    )
+  );
+}
+
+const BOILERPLATE_PARAGRAPH_PATTERNS = [
+  /^baca juga\b/i,
+  /^simak juga\b/i,
+  /^baca berita\b/i,
+  /^berita terkait\b/i,
+  /^artikel terkait\b/i,
+  /^rekomendasi\b/i,
+  /^ikuti\b/i,
+  /^editor\s*:/i,
+  /^penulis\s*:/i,
+  /^tags?\s*:/i,
+  /^foto\s*:/i,
+  /^ilustrasi\s*:/i,
+  /^antarafoto\b/i,
+  /^scroll to\b/i,
+  /^advertisement\b/i,
+  /^iklan\b/i,
+  /^share\b/i,
+  /^bagikan\b/i,
+  /^copyright\b/i,
+  /^hak cipta\b/i,
+  /^download\b/i,
+  /^baca selengkapnya\b/i,
+  /^simak video\b/i,
+  /^video terkait\b/i,
+];
+
+function paragraphsFromHtml(html: string): string[] {
+  const paragraphs: string[] = [];
+  const seen = new Set<string>();
+
+  const add = (value: string): void => {
+    const text = cleanText(value);
+    if (text.length < 40) return;
+    if (
+      BOILERPLATE_PARAGRAPH_PATTERNS.some((pattern) => pattern.test(text))
+    ) {
+      return;
+    }
+    if (hasGamblingSignal(text)) return;
+
+    const key = normalizeForSearch(text)
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+    if (!key || seen.has(key)) return;
+
+    seen.add(key);
+    paragraphs.push(text);
+  };
+
+  for (const match of html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
+    add(htmlToText(match[1] ?? ''));
+  }
+
+  if (paragraphs.length === 0) {
+    for (const part of htmlToText(html).split(/\n+/)) add(part);
+  }
+
+  return paragraphs;
+}
+
+const GENERIC_AUTHOR_NAMES = new Set([
+  'antaranews.com',
+  'antara news',
+  'cnn indonesia',
+  'cnn indonesia tv',
+  'detikcom',
+  'detik.com',
+  'redaksi',
+  'editor',
+  'admin',
+  'administrator',
+]);
+
+function cleanAuthorName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+
+  const text = cleanText(value);
+  if (!text || text.length > 80) return null;
+  if (/^https?:\/\//i.test(text)) return null;
+  if (GENERIC_AUTHOR_NAMES.has(text.toLowerCase())) return null;
+
+  return text;
+}
+
+/** Penulis asli dari JSON-LD atau meta halaman; null bila hanya nama penerbit. */
+function extractAuthorName(html: string): string | null {
+  const scripts = html.matchAll(
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  );
+
+  for (const script of scripts) {
+    try {
+      const parsed = JSON.parse(script[1] ?? '') as unknown;
+      const graph =
+        parsed && typeof parsed === 'object' && '@graph' in parsed
+          ? (parsed as { '@graph'?: unknown })['@graph']
+          : undefined;
+      const nodes = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(graph)
+          ? graph
+          : [parsed];
+
+      for (const node of nodes) {
+        if (!node || typeof node !== 'object') continue;
+
+        const record = node as Record<string, unknown>;
+        const type = record['@type'];
+        const isArticle = Array.isArray(type)
+          ? type.some(
+              (item) => typeof item === 'string' && /article/i.test(item),
+            )
+          : typeof type === 'string' && /article/i.test(type);
+
+        if (!isArticle) continue;
+
+        const author = record.author;
+        const first = Array.isArray(author) ? author[0] : author;
+        const candidate =
+          typeof first === 'string'
+            ? cleanAuthorName(first)
+            : first && typeof first === 'object'
+              ? cleanAuthorName((first as Record<string, unknown>).name)
+              : null;
+
+        if (candidate) return candidate;
+      }
+    } catch {
+      // JSON-LD tidak valid; lanjut ke meta author.
+    }
+  }
+
+  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const tag = match[0];
+    if (
+      !/(?:name|property)=["'](?:author|article:author)["']/i.test(tag)
+    ) {
+      continue;
+    }
+
+    const candidate = cleanAuthorName(
+      tag.match(/content=["']([^"']*)["']/i)?.[1],
+    );
+    if (candidate) return candidate;
+  }
+
+  return null;
+}
+
+async function fetchFullTextData(
+  url: string,
+  source: FullTextSource,
+): Promise<FullTextData | null> {
+  try {
+    const response = await fetch(url, {
+      next: { revalidate: NEWS_REVALIDATE },
+      headers: PAGE_HEADERS,
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!response.ok) {
+      console.warn(`[fulltext] HTTP ${response.status} untuk ${url}`);
+      return null;
+    }
+
+    const html = await response.text();
+    const bodyHtml = extractBodyHtml(html, source);
+    if (!bodyHtml) return null;
+
+    const paragraphs = paragraphsFromHtml(bodyHtml);
+    if (paragraphs.length === 0) return null;
+
+    const content: ArticleContent[] = [];
+    let totalChars = 0;
+
+    for (const paragraph of paragraphs) {
+      if (content.length >= FULLTEXT_MAX_PARAGRAPHS) break;
+      if (totalChars + paragraph.length > FULLTEXT_MAX_CHARS) break;
+
+      content.push({ type: 'paragraph', text: paragraph });
+      totalChars += paragraph.length;
+    }
+
+    if (totalChars < FULLTEXT_MIN_CHARS) return null;
+
+    return {
+      content,
+      authorName: extractAuthorName(html) ?? undefined,
+    };
+  } catch (error) {
+    console.warn(
+      `[fulltext] gagal mengambil ${url}:`,
+      error instanceof Error ? error.message : 'unknown error',
+    );
+    return null;
+  }
+}
+
+const fullTextMemo = new Map<
+  string,
+  { expiresAt: number; promise: Promise<FullTextData | null> }
+>();
+
+function getFullTextData(
+  url: string,
+  source: FullTextSource,
+): Promise<FullTextData | null> {
+  const cached = fullTextMemo.get(url);
+  if (cached && cached.expiresAt > Date.now()) return cached.promise;
+
+  const promise = fetchFullTextData(url, source);
+  const entry = { expiresAt: Date.now() + FULLTEXT_CACHE_TTL, promise };
+  fullTextMemo.set(url, entry);
+
+  void promise.then((data) => {
+    if (!data) entry.expiresAt = Date.now() + FULLTEXT_FAILURE_TTL;
+  });
+
+  if (fullTextMemo.size > 200) {
+    const oldest = fullTextMemo.keys().next().value;
+    if (oldest) fullTextMemo.delete(oldest);
+  }
+
+  return promise;
+}
+
+async function enrichArticleWithFullText(article: Article): Promise<Article> {
+  const sourceUrl = article.sourceUrl?.trim();
+  if (!sourceUrl) return article;
+
+  const source = fullTextSource(sourceUrl);
+  if (!source) return article;
+
+  const data = await getFullTextData(sourceUrl, source);
+  if (!data) return article;
+
+  const existingChars = article.content
+    .map((block) => block.text ?? '')
+    .join(' ').length;
+  const bodyChars = data.content
+    .map((block) => block.text ?? '')
+    .join(' ').length;
+
+  if (bodyChars < FULLTEXT_MIN_CHARS || bodyChars <= existingChars) {
+    return article;
+  }
+
+  const excerpt =
+    article.excerpt || (data.content[0]?.text ?? '').slice(0, 240);
+  const excerptKey = normalizeForSearch(excerpt).slice(0, 80);
+  const content = data.content.filter((block) => {
+    const text = normalizeForSearch(block.text ?? '');
+    return !excerptKey || !text.startsWith(excerptKey);
+  });
+
+  if (content.length === 0) return article;
+
+  return {
+    ...article,
+    excerpt,
+    content,
+    author: data.authorName
+      ? { ...article.author, name: data.authorName }
+      : article.author,
+    readTime: estimateReadTime(content, excerpt),
+  };
+}
+
 /**
  * Detail artikel eksternal.
  *
  * Feed kategori yang sudah ter-cache dicari lebih dulu (tanpa request baru,
  * kategori tetap akurat). Bila belum ada, judul dari slug dipakai sebagai
  * kata kunci pencarian — satu request, tanpa mengarang isi berita.
+ *
+ * Untuk Antara, CNN Indonesia, dan Detik, isi halaman sumber diambil sekali
+ * dan di-cache; bila gagal, ringkasan asli tetap dipakai.
  */
 export async function getNewsArticleBySlug(
   slug: string,
@@ -1506,11 +2239,12 @@ export async function getNewsArticleBySlug(
 
   const pool = await getAllNewsArticles();
   const cached = pool.find((article) => article.slug === slug);
-  if (cached) return cached;
+  if (cached) return enrichArticleWithFullText(cached);
 
   const query = titleFromSlug(slug);
   if (!query) return null;
 
   const { articles } = await requestFeed({ q: query, sortby: 'relevance' });
-  return articles.find((article) => article.slug === slug) ?? null;
+  const found = articles.find((article) => article.slug === slug);
+  return found ? enrichArticleWithFullText(found) : null;
 }

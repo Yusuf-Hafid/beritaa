@@ -62,10 +62,14 @@ function MetaInfo({
         light ? 'text-white/90' : 'text-muted-foreground'
       )}
     >
-      <span>{article.author.name}</span>
-      <span aria-hidden className={light ? 'text-white/60' : 'text-border'}>
-        ·
-      </span>
+      {!article.sourceName && (
+        <>
+          <span>{article.author.name}</span>
+          <span aria-hidden className={light ? 'text-white/60' : 'text-border'}>
+            ·
+          </span>
+        </>
+      )}
       <span>{formatWaktuRelatif(article.publishedAt)}</span>
       {showReadTime && (
         <>
@@ -127,9 +131,6 @@ function DefaultCard({
         <div className="mt-3.5 flex flex-1 flex-col">
           <div className="flex flex-wrap items-center gap-2">
             <CategoryBadge slug={article.category} asLink={false} />
-            <span className="text-[0.6rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-              {formatWaktuRelatif(article.publishedAt)}
-            </span>
           </div>
 
           <h3 className="mt-2 line-clamp-3 font-serif text-lg font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
@@ -191,9 +192,6 @@ function LeadCard({
           <div className="absolute bottom-0 left-0 right-0 p-6 hidden md:block z-10">
             <div className="flex flex-wrap items-center gap-3">
               <CategoryBadge slug={article.category} asLink={false} />
-              <span className="text-[0.625rem] font-bold uppercase tracking-[0.15em] text-white/90">
-                {formatWaktuRelatif(article.publishedAt)}
-              </span>
             </div>
             <Heading className="mt-2 line-clamp-4 font-serif text-display font-black leading-[1.04] tracking-tight text-white text-balance transition-colors group-hover:text-brand-light">
               {article.title}
@@ -211,9 +209,6 @@ function LeadCard({
         <div className="p-4 md:hidden bg-card">
           <div className="flex flex-wrap items-center gap-2">
             <CategoryBadge slug={article.category} asLink={false} />
-            <span className="text-[0.6rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-              {formatWaktuRelatif(article.publishedAt)}
-            </span>
           </div>
           <Heading className="mt-2 line-clamp-4 font-serif text-display-sm font-black leading-tight text-foreground transition-colors group-hover:text-brand">
             {article.title}
@@ -307,9 +302,6 @@ function HorizontalCard({
         <div className="flex flex-1 flex-col p-4 sm:p-5">
           <div className="flex flex-wrap items-center gap-2">
             <CategoryBadge slug={article.category} asLink={false} />
-            <span className="text-[0.6rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-              {formatWaktuRelatif(article.publishedAt)}
-            </span>
           </div>
 
           <h3 className="mt-2 line-clamp-3 font-serif text-xl font-bold leading-snug text-foreground transition-colors group-hover:text-brand sm:text-2xl">

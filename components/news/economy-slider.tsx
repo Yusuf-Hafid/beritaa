@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CategoryBadge } from '@/components/ui/category-badge';
-import { formatWaktuRelatif } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const AUTOPLAY_INTERVAL = 5000;
@@ -21,7 +20,6 @@ export interface EconomySlide {
   thumbnailAlt: string;
   publishedAt: string;
   readTime: number;
-  authorName: string;
 }
 
 interface EconomySliderProps {
@@ -260,9 +258,6 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
                       <div className="max-w-3xl">
                         <div className="flex flex-wrap items-center gap-3">
                           <CategoryBadge slug={slide.category} asLink={false} />
-                          <span className="text-kicker font-extrabold uppercase text-white/80">
-                            {formatWaktuRelatif(slide.publishedAt)}
-                          </span>
                         </div>
 
                         <h3 className="mt-3 line-clamp-3 font-serif text-3xl font-black leading-[1.05] text-white text-balance sm:text-4xl lg:text-5xl group-hover/slide:text-brand-light transition-colors">
@@ -274,8 +269,6 @@ export function EconomySlider({ slides, className }: EconomySliderProps) {
                         </p>
 
                         <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-kicker font-extrabold uppercase text-white/75">
-                          <span>{slide.authorName}</span>
-                          <span aria-hidden>·</span>
                           <span>{slide.readTime} menit baca</span>
                           <span className="ml-auto hidden items-center gap-1.5 text-white transition-colors group-hover/slide:text-brand-light sm:inline-flex">
                             Baca selengkapnya

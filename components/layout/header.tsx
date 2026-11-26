@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Container } from '@/components/ui/container';
 import { ThemeSwitcher } from '@/components/shared/theme-switcher';
 import { SearchBar } from '@/components/shared/search-bar';
@@ -22,12 +23,22 @@ export function Header({
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Header lives in the layout, so its state survives client-side navigation.
+  // Close the mega panel / drawers on every route change so no overlay is left
+  // covering the page the user just navigated to.
+  useEffect(() => {
+    setActiveMega(null);
+    setMobileOpen(false);
+    setSearchOpen(false);
+  }, [pathname]);
 
   return (
     <header
@@ -53,7 +64,16 @@ export function Header({
           {/* ── Logo ── */}
           <Link
             href="/"
-            className="group flex flex-shrink-0 items-center"
+            draggable={false}
+            onClick={() => {
+              setActiveMega(null);
+              setMobileOpen(false);
+              setSearchOpen(false);
+              // A Link to the current route does not move the reader, so make the
+              // logo take them back to the top when they are already on the home page.
+              if (pathname === "/") window.scrollTo({ top: 0 });
+            }}
+            className="group relative z-10 flex flex-shrink-0 cursor-pointer items-center select-none"
             aria-label="INDONEWS — Beranda"
           >
             {/* Logo artwork has ~20% black padding on every side; crop it so the mark stays legible */}
@@ -61,6 +81,7 @@ export function Header({
               <img
                 src="/Berita-Indonews.svg"
                 alt="Indonews Logo"
+                draggable={false}
                 className="h-full w-full object-cover"
               />
             </span>
@@ -89,10 +110,11 @@ export function Header({
               >
                 <Link
                   href={item.href}
+                  onClick={() => setActiveMega(null)}
                   aria-expanded={activeMega === item.href}
                   aria-controls={`mega-${item.href.replace('/', '')}`}
                   className={cn(
-                    'relative block whitespace-nowrap rounded-md px-2.5 py-2 text-[0.6875rem] font-extrabold uppercase tracking-[0.05em] text-muted-foreground transition-colors hover:text-brand',
+                    'relative block cursor-pointer whitespace-nowrap rounded-md px-2.5 py-2 text-[0.6875rem] font-extrabold uppercase tracking-[0.05em] text-muted-foreground transition-colors hover:text-brand',
                     activeMega === item.href && 'text-brand'
                   )}
                 >
@@ -140,7 +162,7 @@ export function Header({
               aria-label={searchOpen ? 'Tutup pencarian' : 'Buka pencarian'}
               aria-expanded={searchOpen}
               onClick={() => setSearchOpen((v) => !v)}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-brand sm:hidden lg:flex xl:hidden"
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-brand sm:hidden lg:flex xl:hidden"
             >
               <Search size={18} />
             </button>
@@ -155,7 +177,7 @@ export function Header({
             {/* Subscribe CTA */}
             <Link
               href="/langganan"
-              className="hidden whitespace-nowrap xl:inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-[0.6875rem] font-extrabold uppercase tracking-[0.1em] text-white transition-all duration-200 hover:bg-brand-dark hover:shadow-glow-brand"
+              className="hidden cursor-pointer whitespace-nowrap xl:inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-[0.6875rem] font-extrabold uppercase tracking-[0.1em] text-white transition-all duration-200 hover:bg-brand-dark hover:shadow-glow-brand"
             >
               Langganan
             </Link>
@@ -166,7 +188,7 @@ export function Header({
               aria-label={mobileOpen ? 'Tutup menu' : 'Buka menu'}
               aria-expanded={mobileOpen}
               onClick={() => setMobileOpen((v) => !v)}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-brand lg:hidden"
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-brand lg:hidden"
             >
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -192,7 +214,7 @@ export function Header({
                     <Link
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
-                      className="flex items-center justify-center rounded-lg px-3 py-2.5 text-[0.6875rem] font-extrabold uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:bg-muted hover:text-brand"
+                      className="flex cursor-pointer items-center justify-center rounded-lg px-3 py-2.5 text-[0.6875rem] font-extrabold uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:bg-muted hover:text-brand"
                     >
                       {item.label}
                     </Link>
@@ -203,14 +225,14 @@ export function Header({
                 <Link
                   href="/langganan"
                   onClick={() => setMobileOpen(false)}
-                  className="flex-1 rounded-full bg-brand py-2.5 text-center text-[0.6875rem] font-extrabold uppercase tracking-[0.1em] text-white hover:bg-brand-dark transition-colors"
+                  className="flex-1 cursor-pointer rounded-full bg-brand py-2.5 text-center text-[0.6875rem] font-extrabold uppercase tracking-[0.1em] text-white hover:bg-brand-dark transition-colors"
                 >
                   Langganan
                 </Link>
                 <Link
                   href="/newsletter"
                   onClick={() => setMobileOpen(false)}
-                  className="flex-1 rounded-full border border-border py-2.5 text-center text-[0.6875rem] font-extrabold uppercase tracking-[0.1em] text-foreground hover:bg-muted transition-colors"
+                  className="flex-1 cursor-pointer rounded-full border border-border py-2.5 text-center text-[0.6875rem] font-extrabold uppercase tracking-[0.1em] text-foreground hover:bg-muted transition-colors"
                 >
                   Newsletter
                 </Link>
@@ -232,7 +254,7 @@ export function Header({
                 <li key={item.href} className="flex-shrink-0">
                   <Link
                     href={item.href}
-                    className="block whitespace-nowrap px-3 py-1.5 text-[0.625rem] font-extrabold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-brand"
+                    className="block cursor-pointer whitespace-nowrap px-3 py-1.5 text-[0.625rem] font-extrabold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-brand"
                   >
                     {item.label}
                   </Link>

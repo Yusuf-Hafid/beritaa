@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Clock, Tag } from 'lucide-react';
+import { CalendarDays, Clock, Tag } from 'lucide-react';
 import { Container } from '@/components/ui/container';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { CategoryBadge } from '@/components/ui/category-badge';
@@ -70,19 +70,27 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             {article.excerpt}
           </p>
 
-          {/* ── Author & meta ── */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-4 shadow-card">
-            <p className="break-all text-sm font-bold text-foreground">
-              {article.author.name}
-            </p>
+          {/* ── Author & meta ──
+              Byline hanya untuk artikel redaksi. Berita dari penerbit luar tidak
+              punya byline, jadi grup meta memakai flex-1 + justify-between supaya
+              tanggal rata kiri dan estimasi baca rata kanan, mengisi lebar kotak. */}
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-card px-4 py-3.5 shadow-card sm:px-5">
+            {!article.sourceName && (
+              <p className="min-w-0 break-words text-sm font-bold leading-snug text-foreground">
+                {article.author.name}
+              </p>
+            )}
 
-            <div className="flex flex-wrap items-center gap-4 text-[0.6875rem] text-muted-foreground font-bold uppercase tracking-[0.1em]">
+            <div
+              className="flex flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+            >
               <span className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-brand" aria-hidden />
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />
+                <span className="sr-only">Terbit: </span>
                 {formatTanggal(article.publishedAt)}
               </span>
               <span className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-brand" aria-hidden />
+                <Clock className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />
                 {article.readTime} mnt baca
               </span>
             </div>
@@ -107,7 +115,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           />
         </div>
         <p className="mt-2.5 text-xs text-muted-foreground text-center">
-          {article.thumbnailAlt} · Foto: {article.sourceName ?? 'INDONEWS'}
+          {article.thumbnailAlt}
         </p>
       </Container>
 
@@ -117,21 +125,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           {/* Main content */}
           <div className="min-w-0 lg:col-span-2">
             <ArticleBody content={article.content} />
-
-            {article.sourceUrl && (
-              <p className="mt-8 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
-                Ringkasan ini dikutip dari{' '}
-                <a
-                  href={article.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-bold text-brand transition-colors hover:text-brand-dark"
-                >
-                  {article.sourceName ?? 'penerbit asli'}
-                </a>
-                . Baca laporan lengkapnya langsung di penerbit asli.
-              </p>
-            )}
 
             {/* Tags */}
             {article.tags.length > 0 && (

@@ -89,15 +89,74 @@ function formatStockPrice(value: number, currency: 'IDR' | 'USD'): string {
   }).format(value)}`;
 }
 
+// Mata uang yang lazim ditampilkan tanpa desimal (ISO 4217 exponent 0 + IDR).
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  'BIF',
+  'CLP',
+  'DJF',
+  'GNF',
+  'IDR',
+  'ISK',
+  'JPY',
+  'KMF',
+  'KRW',
+  'PYG',
+  'RWF',
+  'UGX',
+  'VND',
+  'VUV',
+  'XAF',
+  'XOF',
+  'XPF',
+]);
+
+// Simbol di depan angka; spasi hanya untuk simbol berbentuk huruf (Rp, RM, S$).
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  AED: 'AED ',
+  AUD: 'A$',
+  CAD: 'C$',
+  CHF: 'CHF ',
+  CNY: '¥',
+  EUR: '€',
+  GBP: '£',
+  HKD: 'HK$',
+  IDR: 'Rp ',
+  INR: '₹',
+  JPY: '¥',
+  KRW: '₩',
+  MYR: 'RM ',
+  NZD: 'NZ$',
+  PHP: '₱',
+  SAR: 'SAR ',
+  SGD: 'S$ ',
+  THB: '฿',
+  TWD: 'NT$',
+  USD: '$',
+  VND: '₫',
+};
+
 function formatCurrencyAmount(value: number, code: string): string {
+  if (!Number.isFinite(value)) return '—';
+
+  const currency = code.toUpperCase();
+  const digits = ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2;
+  const number = new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+
+  const symbol = CURRENCY_SYMBOLS[currency];
+  if (symbol) return `${symbol}${number}`;
+
   try {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
-      currency: code,
-      maximumFractionDigits: 4,
+      currency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
     }).format(value);
   } catch {
-    return `${value.toFixed(4)} ${code}`;
+    return `${number} ${currency}`;
   }
 }
 

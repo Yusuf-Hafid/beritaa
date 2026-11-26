@@ -69,7 +69,6 @@ export default async function HomePage() {
       thumbnailAlt: article.thumbnailAlt,
       publishedAt: article.publishedAt,
       readTime: article.readTime,
-      authorName: article.author.name,
     }));
 
   return (

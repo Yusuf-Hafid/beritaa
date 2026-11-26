@@ -105,7 +105,7 @@ export async function Sidebar({ className }: SidebarProps) {
                   {article.title}
                 </h3>
                 <p className="mt-1.5 text-[0.6rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                  {article.author.name}
+                  {formatWaktuRelatif(article.publishedAt)}
                 </p>
               </div>
             </Link>

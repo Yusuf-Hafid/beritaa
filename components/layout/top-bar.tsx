@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { CalendarDays, Clock } from 'lucide-react';
 import { Container } from '@/components/ui/container';
@@ -15,6 +16,7 @@ const topLinks = [
 
 export function TopBar() {
   const [now, setNow] = useState<Date | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     setNow(new Date());
@@ -25,7 +27,7 @@ export function TopBar() {
   return (
     <div className="border-b border-border bg-background text-foreground">
       <Container>
-        <div className="flex h-8 items-center justify-between text-[0.5625rem] font-bold uppercase tracking-[0.14em]">
+        <div className="relative flex h-8 items-center justify-between text-[0.5625rem] font-bold uppercase tracking-[0.14em]">
           {/* Left: datetime */}
           <div className="flex items-center gap-4">
             <span className="hidden items-center gap-1.5 sm:flex text-muted-foreground">
@@ -38,14 +40,24 @@ export function TopBar() {
             </span>
           </div>
 
-          {/* Center brand mark (mobile only) */}
-          <span className="block h-5 aspect-[5/3] overflow-hidden rounded-[4px] ring-1 ring-border/60 dark:ring-white/20 sm:hidden">
+          {/* Center brand mark (mobile only) — links home so the logo is
+              tappable on phones, where the top bar is the first brand hit area. */}
+          <Link
+            href="/"
+            draggable={false}
+            aria-label="INDONEWS — Beranda"
+            onClick={() => {
+              if (pathname === "/") window.scrollTo({ top: 0 });
+            }}
+            className="absolute left-1/2 top-1/2 z-10 block h-6 -translate-x-1/2 -translate-y-1/2 aspect-[5/3] cursor-pointer select-none overflow-hidden rounded-[4px] ring-1 ring-border/60 dark:ring-white/20 sm:hidden"
+          >
             <img
               src="/Berita-Indonews.svg"
               alt="Indonews Logo"
+              draggable={false}
               className="h-full w-full object-cover"
             />
-          </span>
+          </Link>
 
           {/* Right: utility links */}
           <nav className="hidden items-center gap-4 sm:flex" aria-label="Tautan layanan">
